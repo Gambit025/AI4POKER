@@ -1,49 +1,74 @@
 # AI4POKER
 
-AI-powered Texas Hold'em poker trainer with real-time coaching.
+<p align="center">
+  <strong>🤖 AI 驱动的德州扑克智能教练</strong>
+</p>
 
-## Features
+<p align="center">
+  实时胜率 · 策略建议 · 多风格 AI 对手 · 专业级牌局复盘
+</p>
 
-- **AI Coach** — Real-time win probability, EHS analysis, and natural language betting suggestions at every street (Preflop / Flop / Turn / River)
-- **2–8 Players** — Configurable table size with intelligent seat layout
-- **9 AI Personalities** — TAG, LAG, Tight Passive, Loose Passive, GTO, Maniac, Nit, Shark, Fish
-- **Hand Recap** — Post-hand analysis grading each decision with poker terminology (Pot Odds, Fold Equity, EV, SPR, etc.)
-- **Sound Effects** — Synthesized audio for deals, bets, folds, and wins via Web Audio API
-- **Mobile-First UI** — Dark glassmorphism design optimized for phone screens
-- **Debt System** — Players can go negative, keeping the game running without forced eliminations
+---
 
-## Tech Stack
+## 不止是练牌，更是你的私人 AI 扑克教练
 
-- Vanilla HTML / CSS / JavaScript (zero dependencies)
-- Monte Carlo simulation for win probability
-- Web Worker for non-blocking computation
-- Web Audio API for synthesized sound effects
+**AI4POKER** 把「AI 教练」搬进浏览器：在每一手牌的每一个决策点，为你提供**实时胜率估算**、**EHS 期望收益分析**和**自然语言下注建议**。无需安装、无需后端，打开即用，在真实对局节奏里提升你的扑克思维。
 
-## Quick Start
+- **智能决策支持**：翻前 / 翻牌 / 转牌 / 河牌全阶段，AI 实时给出「该跟注、加注还是弃牌」的可理解建议
+- **专业级胜率引擎**：基于 Monte Carlo 模拟的胜率计算，结合 EHS（赢率×胜率）帮你理解期望价值
+- **多风格 AI 对手**：9 种人格（TAG、LAG、GTO、Maniac、Nit、Shark…）模拟真实牌桌，练就应对不同玩家的能力
+- **零依赖、纯前端**：不依赖 Node、不依赖框架，一个文件夹 + 本地服务器即可运行
+
+---
+
+## 核心亮点
+
+| 能力 | 说明 |
+|------|------|
+| **🔄 全街 AI 教练** | 从翻前到河牌，每一街都有实时胜率、EHS 与自然语言策略建议，像身边坐了一位高手在帮你读牌 |
+| **📊 专业级牌局复盘** | 每手牌结束后，用 Pot Odds、Fold Equity、EV、SPR 等术语为你的每条决策打分，快速发现漏洞 |
+| **🎭 9 种 AI 人格** | TAG、LAG、Tight/Loose Passive、GTO、Maniac、Nit、Shark、Fish，模拟真实牌桌的多样风格 |
+| **👥 2–8 人灵活桌** | 从单挑到满桌，可调人数与智能座位布局，随时练不同人数下的策略 |
+| **🎵 沉浸体验** | 发牌、下注、弃牌、获胜均有合成音效；Dark Glassmorphism 界面，手机也能畅玩 |
+| **♾️ 无淘汰机制** | 筹码可为负、对局不中断，专注练牌与学习，不必担心被清空离桌 |
+
+---
+
+## 技术栈
+
+- **前端**：原生 HTML / CSS / JavaScript，零依赖、无构建
+- **AI 胜率引擎**：Monte Carlo 模拟 + EHS 计算，在 Web Worker 中异步跑，不卡界面
+- **音效**：Web Audio API 合成，无需外部音频文件
+
+---
+
+## 快速开始
 
 ```bash
 cd AI4POKER
 python3 -m http.server 8080
 ```
 
-Open `http://localhost:8080` in your browser.
+浏览器打开 **http://localhost:8080**。也可直接双击 `index.html` 用浏览器打开，无需任何安装。
 
-Or simply open `index.html` directly — no build step required.
+---
 
-## Project Structure
+## 项目结构
 
 ```
 AI4POKER/
-├── index.html          # Main HTML entry
-├── style.css           # Dark glassmorphism styles
+├── index.html          # 主入口（首页 / 设置 / 对局）
+├── style.css           # Dark Glassmorphism 主题
 ├── js/
-│   ├── game.js         # Core poker engine, AI logic, hand evaluation
-│   ├── app.js          # UI rendering, animations, event handling
-│   ├── seatPositions.js # Table seat layout for 2-8 players
-│   ├── sounds.js       # Web Audio API sound synthesis
-│   └── mcWorker.js     # Web Worker for Monte Carlo simulation
+│   ├── game.js         # 核心：牌型评估、Monte Carlo、EHS、AI 决策与建议
+│   ├── app.js          # UI 渲染、动画、事件与 Worker 调用
+│   ├── mcWorker.js     # 异步 Monte Carlo 胜率
+│   ├── seatPositions.js # 2–8 人座位布局
+│   └── sounds.js       # 音效合成
 └── README.md
 ```
+
+---
 
 ## License
 
