@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AI4POKER — 德州扑克</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="top-bar">
+      <button type="button" class="top-bar-btn top-bar-close" id="btn-back" aria-label="返回">×</button>
+      <span class="top-bar-time" id="top-time">11:38</span>
+      <div class="top-bar-chips-info hidden" id="top-chips-info">
+        <span class="top-chips-stack" id="top-chips-stack">$1000</span>
+        <span class="top-chips-pl" id="top-chips-pl">±0</span>
+      </div>
+      <div class="top-bar-right">
+        <span class="top-bar-dots">⋮</span>
+        <button type="button" class="top-bar-btn top-bar-settings" aria-label="设置">⚙</button>
+      </div>
+    </header>
+
+    <!-- 1. 入口：三个选项 -->
+    <div id="home-screen" class="screen home-screen">
+      <div class="home-content">
+        <h1 class="home-title">AI4POKER</h1>
+        <p class="home-subtitle">选择模式开始</p>
+        <div class="home-options">
+          <button type="button" class="home-option home-option-primary" id="btn-practice">
+            <span class="home-option-icon">🎯</span>
+            <span class="home-option-label">练习</span>
+            <span class="home-option-desc">自由对局，自定义规则</span>
+          </button>
+          <button type="button" class="home-option home-option-placeholder" id="btn-option2" disabled>
+            <span class="home-option-icon">—</span>
+            <span class="home-option-label">敬请期待</span>
+            <span class="home-option-desc">即将推出</span>
+          </button>
+          <button type="button" class="home-option home-option-placeholder" id="btn-option3" disabled>
+            <span class="home-option-icon">—</span>
+            <span class="home-option-label">敬请期待</span>
+            <span class="home-option-desc">即将推出</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. 练习设置：人数、速度、盲注、AI 辅助 -->
+    <div id="settings-screen" class="screen settings-screen hidden">
+      <div class="settings-content">
+        <h2 class="settings-title">练习设置</h2>
+
+        <section class="settings-section">
+          <h3 class="settings-section-title">人数</h3>
+          <div class="settings-choices" id="settings-players" role="group" aria-label="玩家人数">
+            <!-- 2–9 由 JS 生成 -->
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3 class="settings-section-title">对局速度</h3>
+          <div class="settings-choices" id="settings-speed" role="group" aria-label="对局速度">
+            <button type="button" class="settings-choice" data-speed="slow">慢</button>
+            <button type="button" class="settings-choice active" data-speed="medium">中</button>
+            <button type="button" class="settings-choice" data-speed="fast">快</button>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3 class="settings-section-title">筹码大小（小盲/大盲）</h3>
+          <div class="settings-choices settings-choices-blinds" id="settings-blinds" role="group" aria-label="盲注">
+            <button type="button" class="settings-choice" data-sb="1" data-bb="2">1/2</button>
+            <button type="button" class="settings-choice active" data-sb="5" data-bb="10">5/10</button>
+            <button type="button" class="settings-choice" data-sb="50" data-bb="100">50/100</button>
+            <button type="button" class="settings-choice" data-sb="100" data-bb="200">100/200</button>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3 class="settings-section-title">AI 辅助</h3>
+          <div class="settings-choices settings-choices-toggle" id="settings-ai" role="group" aria-label="AI辅助">
+            <button type="button" class="settings-choice" data-ai="off">关闭</button>
+            <button type="button" class="settings-choice active" data-ai="on">开启</button>
+          </div>
+          <p class="settings-hint">开启后对局中显示胜率与建议操作</p>
+        </section>
+
+        <section class="settings-section">
+          <h3 class="settings-section-title">音效</h3>
+          <div class="settings-choices settings-choices-toggle" id="settings-sound" role="group" aria-label="音效">
+            <button type="button" class="settings-choice" data-sound="off">关闭</button>
+            <button type="button" class="settings-choice active" data-sound="on">开启</button>
+          </div>
+          <p class="settings-hint">下注、发牌、获胜等操作音效</p>
+        </section>
+
+        <button type="button" class="btn-enter-game" id="btn-enter-game">进入游戏</button>
+      </div>
+    </div>
+
+    <!-- 3. 正式游戏 -->
+    <div id="game-screen" class="screen game-screen hidden">
+      <div class="table-container">
+        <div id="table-oval" class="table-oval table-oval-in-game">
+          <div class="table-center-faint">AI4POKER</div>
+          <div class="table-center-faint table-center-blinds" id="table-blinds-label">5/10</div>
+          <div class="street-indicator" id="street-indicator">
+            <span class="street-step active" data-street="0">Pre</span>
+            <span class="street-dot"></span>
+            <span class="street-step" data-street="1">Flop</span>
+            <span class="street-dot"></span>
+            <span class="street-step" data-street="2">Turn</span>
+            <span class="street-dot"></span>
+            <span class="street-step" data-street="3">River</span>
+          </div>
+          <div class="table-pot-badge" id="table-pot-badge">$0</div>
+          <div class="table-community" id="community-cards"></div>
+          <div class="table-winner-banner hidden" id="winner-banner"></div>
+          <div class="table-start-wrap hidden" id="table-start-wrap">
+            <button type="button" class="btn-start-on-table" id="btn-start-hand">Start</button>
+          </div>
+          <div id="deal-animation-layer" class="deal-animation-layer hidden"></div>
+          <div class="seats-ring" id="game-seats"></div>
+        </div>
+      </div>
+      <div id="fold-animation-layer" class="fold-animation-layer"></div>
+
+      <div class="next-hand-bar hidden" id="table-next-wrap">
+        <button type="button" class="btn-next-hand" id="btn-next-hand">下一局</button>
+      </div>
+
+      <section id="analysis-panel" class="analysis-panel hidden">
+        <div class="analysis-in-game" id="analysis-in-game">
+          <div class="analysis-tags">
+            <span class="analysis-tag tag-position" id="advice-position">—</span>
+            <span class="analysis-tag tag-street" id="advice-street">—</span>
+            <span class="analysis-tag tag-hand" id="advice-hand-desc">—</span>
+          </div>
+          <div class="analysis-win-row">
+            <span class="analysis-label">胜率</span>
+            <span class="analysis-value" id="advice-win">—%</span>
+            <span class="analysis-tier" id="advice-tier"></span>
+            <div class="progress-wrap"><div class="progress-bar" id="progress-win"></div></div>
+          </div>
+          <div class="analysis-draw-row hidden" id="row-draws">
+            <span class="draw-icon" id="draw-icon">♠</span>
+            <span class="draw-text" id="advice-draws">—</span>
+          </div>
+          <div class="advice-action-row">
+            <span class="advice-action" id="advice-action">—</span>
+          </div>
+          <div class="advice-coach" id="advice-coach">—</div>
+        </div>
+        <div class="analysis-recap hidden" id="analysis-recap">
+          <div class="recap-grade-row" id="recap-grade-row">
+            <span class="recap-grade-badge" id="recap-grade-badge">B</span>
+            <span class="recap-grade-summary" id="recap-grade-summary"></span>
+          </div>
+          <div class="recap-chip-change" id="recap-chip-change"></div>
+          <div class="recap-decisions" id="recap-decisions"></div>
+        </div>
+      </section>
+
+      <aside class="bottom-panel">
+        <div class="panel-row panel-row-pot">
+          <button type="button" class="panel-btn" data-frac="0.3">0.3 Pot</button>
+          <button type="button" class="panel-btn" data-frac="0.5">0.5 Pot</button>
+          <button type="button" class="panel-btn" data-frac="0.7">0.7 Pot</button>
+          <button type="button" class="panel-btn" data-frac="1">1.0 Pot</button>
+          <button type="button" class="panel-btn" data-frac="all">All In</button>
+        </div>
+        <div class="panel-row panel-row-mod">
+          <button type="button" class="panel-btn mod" id="btn-div3">÷3</button>
+          <button type="button" class="panel-btn mod" id="btn-div2">÷2</button>
+          <input type="number" class="panel-input" id="panel-bet-input" min="0" value="10" />
+          <button type="button" class="panel-btn mod" id="btn-x2">×2</button>
+          <button type="button" class="panel-btn mod" id="btn-x3">×3</button>
+        </div>
+        <div class="panel-row panel-row-actions">
+          <button type="button" class="panel-btn action fold" id="btn-fold">Fold</button>
+          <button type="button" class="panel-btn action call-bet" id="btn-call">Call $10</button>
+          <button type="button" class="panel-btn action check" id="btn-check">Check</button>
+        </div>
+      </aside>
+
+      <div id="action-indicator" class="action-indicator hidden"></div>
+    </div>
+  </div>
+
+  <script src="js/seatPositions.js"></script>
+  <script src="js/sounds.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
