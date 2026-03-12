@@ -322,6 +322,49 @@ function getHandRecap(state) {
     chipStr = chipDiff >= 0 ? '+$' + chipDiff : '-$' + Math.abs(chipDiff);
   }
 
+  var showdownSummary = '';
+  var active = s.players.filter(function (p) { return !p.isFolded; });
+  if (active.length <= 1) {
+    var winner = s.winnerIndices && s.winnerIndices.length ? s.players[s.winnerIndices[0]] : null;
+    showdownSummary = winner ? winner.name + ' 获胜——其他玩家全部弃牌，无需亮牌。' : '';
+  } else if (s.communityCards && s.communityCards.length >= 3) {
+    var boardStr = s.communityCards.map(cardToStr).join(' ');
+    showdownSummary = '【公共牌】' + boardStr + '\n';
+    var playerResults = [];
+    for (var pi = 0; pi < s.players.length; pi++) {
+      var pp = s.players[pi];
+      if (pp.isFolded) continue;
+      var hand = pp.hand;
+      if (!hand || hand.length < 2) continue;
+      var ev = bestHand(hand.concat(s.communityCards));
+      var rankName = ev && HAND_RANK_ZH[ev.rank] ? HAND_RANK_ZH[ev.rank] : '高牌';
+      var isWinner = s.winnerIndices && s.winnerIndices.indexOf(pi) >= 0;
+      playerResults.push({
+        name: pp.name,
+        handStr: handToStr(hand),
+        rankName: rankName,
+        rankVal: ev ? ev.rank : -1,
+        isWinner: isWinner,
+      });
+    }
+    playerResults.sort(function (a, b) { return b.rankVal - a.rankVal; });
+    for (var ri = 0; ri < playerResults.length; ri++) {
+      var pr = playerResults[ri];
+      showdownSummary += (pr.isWinner ? '🏆 ' : '   ') + pr.name + '：' + pr.handStr + ' → ' + pr.rankName + (pr.isWinner ? '（获胜）' : '') + '\n';
+    }
+    if (playerResults.length >= 2) {
+      var winnerR = playerResults.filter(function (x) { return x.isWinner; });
+      var loserR = playerResults.filter(function (x) { return !x.isWinner; });
+      if (winnerR.length > 0 && loserR.length > 0) {
+        if (winnerR[0].rankVal > loserR[0].rankVal) {
+          showdownSummary += '\n' + winnerR[0].name + ' 的 ' + winnerR[0].rankName + ' 大于 ' + loserR[0].name + ' 的 ' + loserR[0].rankName + '，牌型更强所以获胜。';
+        } else {
+          showdownSummary += '\n两者都是 ' + winnerR[0].rankName + '，但 ' + winnerR[0].name + ' 的关键牌更大（踢脚牌 Kicker 更高），所以获胜。';
+        }
+      }
+    }
+  }
+
   return {
     grade: grade,
     gradeEmoji: gradeEmoji,
@@ -331,6 +374,7 @@ function getHandRecap(state) {
     heroFolded: heroFolded,
     chipChange: chipStr,
     chipDiff: chipDiff,
+    showdownSummary: showdownSummary,
   };
 }
 
@@ -649,9 +693,16 @@ function calcAdviceBetSize(state, ehs, isBluff) {
   var maxBet = Math.max.apply(null, s.players.map(function(p) { return p.currentBet; }));
   if (s.street === 0) {
     var raiseTo = Math.max(Math.floor(maxBet * 2.5), maxBet + s.minRaise);
+    var pfMin = maxBet + s.minRaise;
+    if (raiseTo < pfMin) raiseTo = pfMin;
     return raiseTo;
   }
-  return aiBetSize(s.pot, toCall, s.minRaise, ehs, human.currentBet, human.chips, s.communityCards, !!isBluff);
+  var potAfterCall = s.pot + toCall;
+  var raiseAdd = Math.max(s.minRaise, Math.floor(potAfterCall * (isBluff ? 0.55 : (ehs >= 0.7 ? 0.75 : 0.6))));
+  var target = maxBet + raiseAdd;
+  var minTarget = maxBet + s.minRaise;
+  if (target < minTarget) target = minTarget;
+  return target;
 }
 
 /**
@@ -737,29 +788,8 @@ function mixedAction(probability) {
  * Lower SPR → more willing to commit; higher SPR → more cautious sizing.
  * Bluffs use ~60-75% pot; value bets vary by strength and board.
  */
-function aiBetSize(pot, toCall, minRaise, ehs, aiCurrentBet, aiChips, communityCards, isBluff) {
-  var drawiness = boardDrawiness(communityCards || []);
-  var spr = pot > 0 ? aiChips / pot : 99;
-  var potFraction;
-  if (isBluff) {
-    potFraction = 0.55 + drawiness * 0.15;
-  } else if (ehs >= 0.85) {
-    potFraction = 0.7 + drawiness * 0.1;
-    if (spr < 2) potFraction = 1.0;
-  } else if (ehs >= 0.65) {
-    potFraction = 0.55 + drawiness * 0.12;
-  } else if (ehs >= 0.5) {
-    potFraction = 0.4 + drawiness * 0.1;
-  } else {
-    potFraction = 0.33 + drawiness * 0.08;
-  }
-  if (spr < 3 && ehs > 0.55) {
-    potFraction = Math.max(potFraction, 0.6);
-  }
-  var addAmount = Math.max(minRaise, Math.floor(pot * Math.min(1.2, potFraction)));
-  var targetBet = aiCurrentBet + addAmount;
-  if (targetBet <= aiCurrentBet) targetBet = aiCurrentBet + minRaise;
-  return targetBet;
+function aiBetSize(pot, toCall, minRaise, ehs, aiCurrentBet, aiChips, communityCards, isBluff, bb) {
+  return humanizedBetSize(pot, toCall, minRaise, ehs, aiCurrentBet, aiChips, communityCards, isBluff, bb, 1.0, isBluff ? 'bluff' : 'value');
 }
 
 function recommend(hand, state) {
@@ -1056,23 +1086,140 @@ function createPlayer(name, chips, isHuman, style) {
 var ROBOT_NAMES = ['Robot A', 'Robot B', 'Robot C', 'Robot D', 'Robot E', 'Robot F', 'Robot G', 'Robot H', 'Robot I'];
 
 var AI_STYLES = [
-  { label: 'TAG',  openMod: 0.90, aggrMod: 1.30, bluffMod: 0.8,  foldMod: 1.10 },
-  { label: 'LAG',  openMod: 1.20, aggrMod: 1.25, bluffMod: 1.5,  foldMod: 0.80 },
-  { label: 'TP',   openMod: 0.80, aggrMod: 0.70, bluffMod: 0.3,  foldMod: 1.25 },
-  { label: 'LP',   openMod: 1.25, aggrMod: 0.65, bluffMod: 0.5,  foldMod: 0.70 },
-  { label: 'GTO',  openMod: 1.00, aggrMod: 1.00, bluffMod: 1.0,  foldMod: 1.00 },
-  { label: 'MANIAC', openMod: 1.40, aggrMod: 1.50, bluffMod: 2.0, foldMod: 0.55 },
-  { label: 'NIT',  openMod: 0.70, aggrMod: 0.80, bluffMod: 0.2,  foldMod: 1.40 },
-  { label: 'SHARK', openMod: 1.05, aggrMod: 1.15, bluffMod: 1.2, foldMod: 0.95 },
-  { label: 'FISH', openMod: 1.30, aggrMod: 0.60, bluffMod: 0.4,  foldMod: 0.65 },
+  { label: 'TAG',     weight: 20,
+    openMod: 0.90, aggrMod: 1.30, bluffMod: 0.8,  foldMod: 1.10,
+    fearMod: 1.20, commitMod: 0.3, raiseThr: 0.72, sizingMod: 0.85 },
+  { label: 'LAG',     weight: 12,
+    openMod: 1.20, aggrMod: 1.25, bluffMod: 1.5,  foldMod: 0.80,
+    fearMod: 0.70, commitMod: 0.5, raiseThr: 0.58, sizingMod: 1.05 },
+  { label: 'TP',      weight: 10,
+    openMod: 0.80, aggrMod: 0.70, bluffMod: 0.3,  foldMod: 1.25,
+    fearMod: 1.40, commitMod: 0.2, raiseThr: 0.82, sizingMod: 0.70 },
+  { label: 'LP',      weight: 8,
+    openMod: 1.25, aggrMod: 0.65, bluffMod: 0.5,  foldMod: 0.70,
+    fearMod: 0.60, commitMod: 0.8, raiseThr: 0.85, sizingMod: 0.75 },
+  { label: 'GTO',     weight: 5,
+    openMod: 1.00, aggrMod: 1.00, bluffMod: 1.0,  foldMod: 1.00,
+    fearMod: 1.00, commitMod: 0.4, raiseThr: 0.68, sizingMod: 1.00 },
+  { label: 'MANIAC',  weight: 3,
+    openMod: 1.40, aggrMod: 1.50, bluffMod: 2.0,  foldMod: 0.55,
+    fearMod: 0.30, commitMod: 0.9, raiseThr: 0.40, sizingMod: 1.30 },
+  { label: 'NIT',     weight: 10,
+    openMod: 0.70, aggrMod: 0.80, bluffMod: 0.2,  foldMod: 1.40,
+    fearMod: 1.80, commitMod: 0.1, raiseThr: 0.85, sizingMod: 0.65 },
+  { label: 'SHARK',   weight: 7,
+    openMod: 1.05, aggrMod: 1.15, bluffMod: 1.2,  foldMod: 0.95,
+    fearMod: 0.90, commitMod: 0.35, raiseThr: 0.65, sizingMod: 1.00 },
+  { label: 'FISH',    weight: 25,
+    openMod: 1.30, aggrMod: 0.60, bluffMod: 0.4,  foldMod: 0.65,
+    fearMod: 0.50, commitMod: 0.85, raiseThr: 0.90, sizingMod: 0.80 },
 ];
+
+function pickRandomStyle() {
+  var totalWeight = 0;
+  for (var i = 0; i < AI_STYLES.length; i++) totalWeight += AI_STYLES[i].weight;
+  var roll = Math.random() * totalWeight;
+  var cumulative = 0;
+  for (var j = 0; j < AI_STYLES.length; j++) {
+    cumulative += AI_STYLES[j].weight;
+    if (roll < cumulative) return AI_STYLES[j];
+  }
+  return AI_STYLES[0];
+}
+
+// =====================================================================
+// 5-LAYER AI DECISION ENGINE
+// =====================================================================
+
+function calcFearLevel(toCall, initialStack, street, fearMod, totalBet) {
+  if (toCall <= 0) return 0;
+  var ratio = toCall / Math.max(1, initialStack);
+  var baseFear;
+  if (ratio < 0.05)      baseFear = 0.05;
+  else if (ratio < 0.10) baseFear = 0.18;
+  else if (ratio < 0.20) baseFear = 0.35;
+  else if (ratio < 0.35) baseFear = 0.55;
+  else if (ratio < 0.50) baseFear = 0.72;
+  else                    baseFear = 0.90;
+  var alreadyInRatio = (totalBet || 0) / Math.max(1, initialStack);
+  if (alreadyInRatio > 0.5) baseFear += 0.15;
+  else if (alreadyInRatio > 0.3) baseFear += 0.08;
+  var streetMult = street === 0 ? 0.7 : (street === 3 ? 1.25 : 1.0);
+  return Math.min(1, baseFear * streetMult * (fearMod || 1.0));
+}
+
+function calcCommitPressure(totalBet, initialStack, commitMod) {
+  var ratio = totalBet / Math.max(1, initialStack);
+  if (ratio < 0.10) return 0;
+  if (ratio < 0.25) return 0.15;
+  if (ratio < 0.50) return 0.35;
+  if (ratio < 0.75) return 0.55;
+  return 0.75;
+}
+
+function readThreatLevel(state, aiIndex) {
+  var log = state.actionLog || [];
+  var threat = 0;
+  var oppRaises = 0;
+  var oppBetsThisStreet = 0;
+  for (var i = 0; i < log.length; i++) {
+    var entry = log[i];
+    if (entry.player === aiIndex) continue;
+    if (entry.action === 'raise' || entry.action === 'bet') {
+      oppRaises++;
+      if (entry.street === state.street) oppBetsThisStreet++;
+    }
+  }
+  threat += Math.min(0.4, oppRaises * 0.12);
+  threat += oppBetsThisStreet * 0.15;
+  var raiseCount = state.raiseCountThisStreet || 0;
+  if (raiseCount >= 3) threat += 0.25;
+  else if (raiseCount >= 2) threat += 0.12;
+  return Math.min(1, threat);
+}
+
+function calcRequiredStrength(baseLine, fear, threat, commitPressure, commitMod) {
+  var committed = commitPressure * commitMod;
+  return Math.max(0.10, Math.min(0.95,
+    baseLine + fear * 0.35 + threat * 0.20 - committed * 0.15
+  ));
+}
+
+function humanizedBetSize(pot, toCall, minRaise, ehs, aiCurrentBet, aiChips, communityCards, isBluff, bb, sizingMod, intent) {
+  var drawiness = boardDrawiness(communityCards || []);
+  var initialStack = bb ? 100 * bb : 1000;
+  var potFraction;
+
+  if (intent === 'value') {
+    potFraction = 0.50 + (ehs - 0.5) * 0.5 + drawiness * 0.10;
+    potFraction = Math.max(0.40, Math.min(0.85, potFraction));
+  } else if (intent === 'bluff') {
+    potFraction = 0.38 + drawiness * 0.12;
+    potFraction = Math.max(0.33, Math.min(0.65, potFraction));
+  } else {
+    potFraction = 0.45 + drawiness * 0.08;
+  }
+
+  potFraction *= (sizingMod || 1.0);
+  potFraction = Math.min(1.0, potFraction);
+
+  var addAmount = Math.max(minRaise, Math.floor(pot * potFraction));
+  var targetBet = aiCurrentBet + addAmount;
+  if (targetBet <= aiCurrentBet) targetBet = aiCurrentBet + minRaise;
+
+  var hardCap = initialStack * 2;
+  if (targetBet > hardCap) targetBet = hardCap;
+  if (targetBet <= aiCurrentBet) targetBet = aiCurrentBet + minRaise;
+
+  return targetBet;
+}
 
 function createGameState(initialChips, playerCount) {
   if (playerCount == null) playerCount = 2;
   if (initialChips == null) initialChips = 500;
   var players = [createPlayer('你', initialChips, true, null)];
   for (var i = 1; i < playerCount; i++) {
-    var style = AI_STYLES[(i - 1) % AI_STYLES.length];
+    var style = pickRandomStyle();
     players.push(createPlayer(ROBOT_NAMES[i - 1] || ('Robot ' + i), initialChips, false, style));
   }
   return {
@@ -1179,6 +1326,8 @@ class PokerGame {
     s.players[bbPos].totalBetThisHand = bbAmt;
     s.players[bbPos].lastAction = { type: 'bet', amount: bbAmt };
     s.pot = sbAmt + bbAmt;
+    s.sb = this.sb;
+    s.bb = this.bb;
     s.actionLog = [
       { street: 0, player: sbPos, name: s.players[sbPos].name, action: 'sb', amount: sbAmt },
       { street: 0, player: bbPos, name: s.players[bbPos].name, action: 'bb', amount: bbAmt }
@@ -1252,14 +1401,19 @@ class PokerGame {
       this.advance();
       return;
     }
+    var toCallCheck = getToCall(s);
     if (action === 'check') {
-      p.lastAction = { type: 'check' };
-      p.actedThisStreet = true;
-      s.actionLog.push({ street: s.street, player: idx, name: p.name, action: 'check', amount: 0 });
-      this.advance();
-      return;
+      if (toCallCheck > 0) {
+        return;
+      } else {
+        p.lastAction = { type: 'check' };
+        p.actedThisStreet = true;
+        s.actionLog.push({ street: s.street, player: idx, name: p.name, action: 'check', amount: 0 });
+        this.advance();
+        return;
+      }
     }
-    const toCall = getToCall(s);
+    const toCall = toCallCheck;
     if (action === 'call') {
       p.chips -= toCall;
       p.currentBet += toCall;
@@ -1414,85 +1568,42 @@ class PokerGame {
     var idx = s.currentPlayerIndex;
     var ai = s.players[idx];
     if (!ai || ai.isHuman) return;
-    if (ai.isFolded) {
-      this.advance();
-      return;
-    }
-    var st = ai.style || { openMod: 1, aggrMod: 1, bluffMod: 1, foldMod: 1 };
+    if (ai.isFolded) { this.advance(); return; }
+
+    var st = ai.style || { openMod:1, aggrMod:1, bluffMod:1, foldMod:1,
+      fearMod:1, commitMod:0.4, raiseThr:0.68, sizingMod:1 };
     var toCall = getToCall(s);
-    var activeOpponents = 0;
-    for (var i = 0; i < s.players.length; i++) {
-      if (i !== idx && !s.players[i].isFolded) activeOpponents++;
-    }
     var isPreflop = s.street === 0;
     var position = getPosition(idx, s);
     var isInPosition = (position === 'LP' || (position === 'SB' && s.players.length === 2));
     var handStr = preflopHandStrength(ai.hand);
-    var MAX_RAISES_PER_STREET = 4;
-    var raiseCapped = (s.raiseCountThisStreet || 0) >= MAX_RAISES_PER_STREET;
-
-    if (isPreflop) {
-      var openThresh = (POSITION_OPEN_THRESHOLD[position] || 0.40) * st.openMod;
-      if (toCall === 0) {
-        if (!raiseCapped && handStr >= openThresh) {
-          var openSize = Math.max(s.minRaise, Math.floor(s.pot * (0.6 + Math.random() * 0.3) * st.aggrMod));
-          var openTarget = ai.currentBet + openSize;
-          if (handStr >= 0.85 && mixedAction(0.15)) {
-            this.act('check');
-          } else {
-            this.act('raise', openTarget);
-          }
-        } else {
-          this.act('check');
-        }
-        return;
-      }
-      var betPressure = toCall / (s.pot + toCall);
-      var BASE_FOLD_THRESH = { EP: 0.45, MP: 0.38, LP: 0.28, SB: 0.35, BB: 0.22 };
-      var baseFold = (BASE_FOLD_THRESH[position] || 0.38) * st.foldMod;
-      var effectiveThresh = baseFold + betPressure * 0.3;
-      if (handStr < effectiveThresh) {
-        if (handStr > effectiveThresh - 0.08 && mixedAction(0.25 / st.foldMod)) {
-          this.act('call');
-        } else {
-          this.act('fold');
-        }
-        return;
-      }
-      if (!raiseCapped && handStr >= 0.80 * st.openMod) {
-        var pfRaise = ai.currentBet + toCall + Math.floor(s.pot * (0.5 + Math.random() * 0.3) * st.aggrMod);
-        if (handStr >= 0.92 && mixedAction(0.25)) {
-          this.act('call');
-        } else {
-          this.act('raise', pfRaise);
-        }
-        return;
-      }
-      this.act('call');
-      return;
+    var MAX_RAISES = 4;
+    var raiseCapped = (s.raiseCountThisStreet || 0) >= MAX_RAISES;
+    var initialStack = s.bb ? 100 * s.bb : 1000;
+    var activeOpponents = 0;
+    for (var i = 0; i < s.players.length; i++) {
+      if (i !== idx && !s.players[i].isFolded) activeOpponents++;
     }
 
-    // --- POSTFLOP DECISION ---
-    var draws = detectDraws(ai.hand, s.communityCards);
-    var ehsData = computeEHS(ai.hand, s.communityCards, 250);
-    var ehs = ehsData.ehs;
-    var drawStr = draws.drawStrength;
-    var drawOuts = draws.outs;
-    var required = requiredEquity(s.pot, toCall);
-    var spr = s.pot > 0 ? ai.chips / s.pot : 99;
-    var drawiness = boardDrawiness(s.communityCards);
+    var fear = calcFearLevel(toCall, initialStack, s.street, st.fearMod, ai.totalBetThisHand);
+    var commit = calcCommitPressure(ai.totalBetThisHand, initialStack, st.commitMod);
+    var threat = readThreatLevel(s, idx);
 
-    // Helper to attempt a raise
     var self = this;
-    function doRaise(isBluff) {
+    function doRaise(intent) {
       if (raiseCapped) {
         if (toCall > 0) self.act('call');
         else self.act('check');
         return;
       }
-      var raiseTo = aiBetSize(s.pot, toCall, s.minRaise, ehs, ai.currentBet, ai.chips, s.communityCards, isBluff);
+      var eVal = intent === 'bluff' ? 0.45 : (isPreflop ? handStr : 0.65);
+      var raiseTo = humanizedBetSize(s.pot, toCall, s.minRaise, eVal,
+        ai.currentBet, ai.chips, s.communityCards, intent === 'bluff',
+        s.bb, st.sizingMod, intent);
       var minRaiseTo = ai.currentBet + toCall + s.minRaise;
       if (raiseTo < minRaiseTo) raiseTo = minRaiseTo;
+      var hardCap = initialStack * 2;
+      if (raiseTo > hardCap) raiseTo = hardCap;
       if (raiseTo <= ai.currentBet + toCall) {
         self.act('call');
       } else {
@@ -1500,97 +1611,175 @@ class PokerGame {
       }
     }
 
+    // ============ PREFLOP ============
+    if (isPreflop) {
+      var openThresh = (POSITION_OPEN_THRESHOLD[position] || 0.40) * st.openMod;
+
+      if (toCall === 0) {
+        if (!raiseCapped && handStr >= openThresh) {
+          if (handStr >= 0.85 && mixedAction(0.12)) {
+            this.act('check');
+          } else {
+            doRaise('value');
+          }
+        } else {
+          this.act('check');
+        }
+        return;
+      }
+
+      var pfRequired = calcRequiredStrength(
+        (POSITION_OPEN_THRESHOLD[position] || 0.38) * st.foldMod,
+        fear, threat, commit, st.commitMod
+      );
+
+      if (handStr < pfRequired) {
+        if (handStr > pfRequired - 0.06 && mixedAction(0.18 / st.foldMod)) {
+          this.act('call');
+        } else {
+          this.act('fold');
+        }
+        return;
+      }
+
+      if (!raiseCapped && handStr >= st.raiseThr && fear < 0.50) {
+        if (handStr >= 0.92 && mixedAction(0.20)) {
+          this.act('call');
+        } else {
+          doRaise('value');
+        }
+        return;
+      }
+
+      this.act('call');
+      return;
+    }
+
+    // ============ POSTFLOP ============
+    var draws = detectDraws(ai.hand, s.communityCards);
+    var ehsData = computeEHS(ai.hand, s.communityCards, 250);
+    var ehs = ehsData.ehs;
+    var drawOuts = draws.outs;
+    var drawStr = draws.drawStrength;
+    var potOdds = requiredEquity(s.pot, toCall);
+    var impliedOdds = drawStr > 0.15 ? drawStr * 0.35 : 0;
+    var effectiveEhs = ehs + impliedOdds;
+
+    var postflopRequired = calcRequiredStrength(0.35, fear, threat, commit, st.commitMod);
+
+    // --- NO BET TO FACE ---
     if (toCall === 0) {
-      if (ehs >= 0.80 && !isInPosition && mixedAction(0.35 * st.aggrMod)) {
-        this.act('check');
+      if (ehs >= st.raiseThr) {
+        if (ehs >= 0.80 && !isInPosition && mixedAction(0.30 * st.aggrMod)) {
+          this.act('check');
+        } else if (mixedAction(0.75 * st.aggrMod)) {
+          doRaise('value');
+        } else {
+          this.act('check');
+        }
         return;
       }
-      if (ehs >= 0.55) {
-        if (mixedAction(0.85 * st.aggrMod)) doRaise(false);
-        else this.act('check');
+
+      if (ehs >= 0.45 && ehs < st.raiseThr) {
+        if (mixedAction(0.25 * st.aggrMod)) {
+          doRaise('value');
+        } else {
+          this.act('check');
+        }
         return;
       }
-      if (drawOuts >= 8 && mixedAction(0.65 * st.bluffMod)) {
-        doRaise(true);
+
+      if (drawOuts >= 8 && mixedAction(0.50 * st.bluffMod)) {
+        doRaise('bluff');
         return;
       }
-      if (drawOuts >= 4 && mixedAction(0.30 * st.bluffMod)) {
-        doRaise(true);
+      if (drawOuts >= 4 && mixedAction(0.20 * st.bluffMod)) {
+        doRaise('bluff');
         return;
       }
-      if (drawiness < 0.3 && ehs < 0.35 && isInPosition && mixedAction(0.12 * st.bluffMod)) {
-        doRaise(true);
+
+      if (ehs < 0.30 && isInPosition && mixedAction(0.08 * st.bluffMod)) {
+        doRaise('bluff');
         return;
       }
+
       this.act('check');
       return;
     }
 
-    var potOdds = required;
-    var impliedOdds = drawStr > 0.15 ? drawStr * 0.4 : 0;
-    var effectiveEhs = ehs + impliedOdds;
-    var betRatio = toCall / Math.max(1, s.pot);
+    // --- FACING A BET ---
 
-    if (ehs >= 0.75) {
-      if (mixedAction(0.70 * st.aggrMod)) {
-        doRaise(false);
-      } else {
-        this.act('call');
+    if (fear >= 0.60 && ehs < 0.70) {
+      if (ehs < postflopRequired) {
+        this.act('fold');
+        return;
       }
-      return;
-    }
-
-    if (ehs >= 0.60) {
-      if (mixedAction(0.30 * st.aggrMod)) {
-        doRaise(false);
-      } else {
-        this.act('call');
+      if (ehs < 0.60 && drawOuts < 8) {
+        this.act('fold');
+        return;
       }
-      return;
-    }
-
-    if (drawOuts >= 8 && betRatio <= 0.75) {
-      if (mixedAction(0.40 * st.bluffMod)) {
-        doRaise(true);
-      } else {
-        this.act('call');
-      }
-      return;
-    }
-
-    if (effectiveEhs >= potOdds) {
       this.act('call');
       return;
     }
 
-    if (drawOuts >= 4 && betRatio <= 0.5 && spr > 3) {
+    if (fear >= 0.35 && ehs < 0.55 && drawOuts < 6) {
+      if (effectiveEhs < potOdds) {
+        this.act('fold');
+        return;
+      }
+    }
+
+    if (ehs >= 0.80) {
+      if (fear < 0.50 && !raiseCapped && mixedAction(0.50 * st.aggrMod)) {
+        doRaise('value');
+      } else {
+        this.act('call');
+      }
+      return;
+    }
+
+    if (ehs >= st.raiseThr) {
+      if (fear < 0.35 && !raiseCapped && mixedAction(0.30 * st.aggrMod)) {
+        doRaise('value');
+      } else {
+        this.act('call');
+      }
+      return;
+    }
+
+    if (ehs >= 0.50) {
+      if (effectiveEhs >= potOdds) {
+        this.act('call');
+      } else if (drawOuts >= 8 && mixedAction(0.25 * st.bluffMod)) {
+        this.act('call');
+      } else {
+        if (fear > 0.30) { this.act('fold'); }
+        else { this.act('call'); }
+      }
+      return;
+    }
+
+    if (drawOuts >= 8 && effectiveEhs >= potOdds * 0.85) {
       this.act('call');
       return;
     }
 
-    var foldThresh = 0.03 / st.foldMod;
-    if (effectiveEhs < potOdds - foldThresh) {
-      if (betRatio > 1.0 && ehs < 0.40 * st.foldMod) {
-        this.act('fold');
-        return;
-      }
-      if (betRatio > 0.5 && ehs < 0.30 * st.foldMod) {
-        this.act('fold');
-        return;
-      }
-      if (ehs < 0.20 * st.foldMod) {
-        this.act('fold');
-        return;
-      }
-      if (mixedAction(0.08 / st.foldMod)) {
-        this.act('call');
-        return;
-      }
-      this.act('fold');
+    if (effectiveEhs >= potOdds && fear < 0.40) {
+      this.act('call');
       return;
     }
 
-    this.act('call');
+    if (commit > 0.50 && (st.commitMod || 0) >= 0.7 && ehs >= 0.30) {
+      this.act('call');
+      return;
+    }
+
+    if (ehs < 0.25 * st.foldMod && mixedAction(0.04 * st.bluffMod)) {
+      doRaise('bluff');
+      return;
+    }
+
+    this.act('fold');
   }
 }
 
@@ -1615,3 +1804,5 @@ window.boardDrawiness = boardDrawiness;
 window.describeHand = describeHand;
 window.describePosition = describePosition;
 window.describeBoard = describeBoard;
+window.pickRandomStyle = pickRandomStyle;
+window.AI_STYLES = AI_STYLES;

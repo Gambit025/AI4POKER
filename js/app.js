@@ -144,7 +144,13 @@
       seat.className = 'seat-item seat-' + side;
       seat.setAttribute('data-seat-index', seatPos);
       seat.setAttribute('data-player-index', i);
-      seat.style.left = pos.left;
+      var seatLeft = pos.left;
+      if (side === 'left' || side === 'right') {
+        var origPct = parseFloat(pos.left);
+        if (side === 'left' && origPct < 6) seatLeft = '6%';
+        if (side === 'right' && origPct > 94) seatLeft = '94%';
+      }
+      seat.style.left = seatLeft;
       seat.style.top = pos.top;
       var isHero = i === 0;
       var displayName = names[i] || ('Bot ' + i);
@@ -338,6 +344,15 @@
         var chipChangeEl = document.getElementById('recap-chip-change');
         var decisionsEl = document.getElementById('recap-decisions');
         
+        var showdownEl = document.getElementById('recap-showdown');
+        if (showdownEl) {
+          if (recap.showdownSummary) {
+            showdownEl.style.display = 'block';
+            showdownEl.textContent = recap.showdownSummary;
+          } else {
+            showdownEl.style.display = 'none';
+          }
+        }
         if (gradeBadge) {
           gradeBadge.textContent = recap.grade;
           gradeBadge.className = 'recap-grade-badge recap-grade-' + recap.grade;
@@ -453,6 +468,17 @@
     var inp = document.getElementById('panel-bet-input');
     if (inp) inp.min = String(Math.max(1, toCallNow > 0 ? toCallNow : minRaiseAmt));
     updateCallBetButton();
+
+    var btnCheckEl = document.getElementById('btn-check');
+    var btnFoldEl = document.getElementById('btn-fold');
+    if (btnCheckEl) {
+      btnCheckEl.disabled = toCallNow > 0;
+      btnCheckEl.classList.toggle('btn-disabled', toCallNow > 0);
+    }
+    if (btnFoldEl) {
+      btnFoldEl.disabled = toCallNow === 0;
+      btnFoldEl.classList.toggle('btn-disabled', toCallNow === 0);
+    }
 
     var startWrap = document.getElementById('table-start-wrap');
     var nextWrap = document.getElementById('table-next-wrap');
@@ -755,6 +781,10 @@
       });
     });
     if (btnCheck) btnCheck.addEventListener('click', function () {
+      if (!game) return;
+      if (game.getToCall() > 0) return;
+      var s = game.getState();
+      if (s.handOver || s.currentPlayerIndex !== 0 || s.players[0].isFolded) return;
       if (window.PokerSounds) PokerSounds.check();
       doAct('check');
     });

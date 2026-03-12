@@ -8,6 +8,10 @@
   实时胜率 · 策略建议 · 多风格 AI 对手 · 专业级牌局复盘
 </p>
 
+<p align="center">
+  <a href="https://gambit025.github.io/AI4POKER/">🌐 在线体验</a>
+</p>
+
 ---
 
 ## 不止是练牌，更是你的私人 AI 扑克教练
@@ -44,12 +48,16 @@
 
 ## 快速开始
 
+在**包含 `index.html` 的本项目目录**下启动本地服务：
+
 ```bash
 cd AI4POKER
 python3 -m http.server 8080
 ```
 
-浏览器打开 **http://localhost:8080**。也可直接双击 `index.html` 用浏览器打开，无需任何安装。
+浏览器打开 **http://localhost:8080**。
+
+> 若打不开：请确认终端当前目录里能看到 `index.html` 和 `js` 文件夹再执行上面命令；若 8080 被占用，可改用 `python3 -m http.server 8000`，然后访问 http://localhost:8000。
 
 ---
 
