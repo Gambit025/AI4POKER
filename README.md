@@ -71,11 +71,8 @@ cd AI4POKER
 python3 -m http.server 8080
 ```
 
-浏览器打开 **http://localhost:8080**。
 
-> 若 8080 被占用，可改用 `python3 -m http.server 8000`，然后访问 http://localhost:8000。
-
-或直接访问 **[在线版本](https://gambit025.github.io/AI4POKER/)**，无需本地运行。
+直接访问 **[在线版本](https://gambit025.github.io/AI4POKER/)**，无需本地运行。
 
 ---
 
