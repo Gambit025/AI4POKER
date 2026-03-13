@@ -1231,6 +1231,10 @@ function humanizedBetSize(pot, toCall, minRaise, ehs, aiCurrentBet, aiChips, com
 
   var hardCap = aiCurrentBet + aiChips;
   if (targetBet > hardCap) targetBet = hardCap;
+  if (targetBet <= aiCurrentBet) targetBet = aiCurrentBet + minRaise;
+
+  return targetBet;
+}
 
 function createGameState(initialChips, playerCount) {
   if (playerCount == null) playerCount = 2;
