@@ -722,11 +722,12 @@ function calcAdviceBetSize(state, ehs, isBluff) {
  * Computes hand strength, positive/negative potential, and effective hand strength
  * in a single simulation pass for efficiency.
  */
-function computeEHS(myHand, communityCards, numSimulations) {
+function computeEHS(myHand, communityCards, numSimulations, numOpponents) {
   numSimulations = numSimulations || 300;
+  numOpponents = Math.max(1, Math.min(numOpponents || 1, 6)); // 最多6个对手避免牌不够
   var need = 5 - communityCards.length;
   if (need <= 0) {
-    var hs = winProbability(myHand, communityCards, null);
+    var hs = winProbabilityMultiway(myHand, communityCards, numOpponents);
     return { hs: hs, ppot: 0, npot: 0, ehs: hs };
   }
   var used = new Set();
@@ -744,39 +745,48 @@ function computeEHS(myHand, communityCards, numSimulations) {
   var aheadTotal = 0, behindTotal = 0;
   for (var i = 0; i < numSimulations; i++) {
     var shuf = shuffle(remaining);
-    var oppHand = shuf.slice(0, 2);
-    var myAll = myHand.concat(communityCards);
-    var oppAll = oppHand.concat(communityCards);
-    var myE = bestHand(myAll.length >= 5 ? myAll : null);
-    var oppE = bestHand(oppAll.length >= 5 ? oppAll : null);
-    var currentResult;
-    if (!myE || !oppE) { currentResult = 0; }
-    else {
-      var cmp = compareEval(myE, oppE);
-      currentResult = cmp > 0 ? 1 : (cmp < 0 ? -1 : 0);
+    // 依次抽 numOpponents 个对手的手牌，再抽公牌
+    var oppHands = [];
+    for (var o = 0; o < numOpponents; o++) {
+      oppHands.push(shuf.slice(o * 2, o * 2 + 2));
     }
-    var futureCards = shuf.slice(2, 2 + need);
+    var futureCards = shuf.slice(numOpponents * 2, numOpponents * 2 + need);
     var fullComm = communityCards.concat(futureCards);
-    var myFuture = bestHand(myHand.concat(fullComm));
-    var oppFuture = bestHand(oppHand.concat(fullComm));
-    var futureResult;
-    if (!myFuture || !oppFuture) { futureResult = 0; }
-    else {
-      var cmp2 = compareEval(myFuture, oppFuture);
-      futureResult = cmp2 > 0 ? 1 : (cmp2 < 0 ? -1 : 0);
+
+    // 当前局面：和所有对手比较
+    var myAllNow = myHand.concat(communityCards);
+    var myENow = myAllNow.length >= 5 ? bestHand(myAllNow) : null;
+    var currentResult = 1; // 1=领先 0=平局 -1=落后
+    for (var o2 = 0; o2 < oppHands.length; o2++) {
+      var oppNow = oppHands[o2].concat(communityCards);
+      if (oppNow.length < 5) continue;
+      var oppENow = bestHand(oppNow);
+      if (!oppENow) continue;
+      var cmp = myENow ? compareEval(myENow, oppENow) : -1;
+      if (cmp < 0) { currentResult = -1; break; }
+      if (cmp === 0) currentResult = Math.min(currentResult, 0);
     }
+
+    // 未来局面：和所有对手比较
+    var myFuture = bestHand(myHand.concat(fullComm));
+    var futureResult = 1;
+    for (var o3 = 0; o3 < oppHands.length; o3++) {
+      var oppFuture = bestHand(oppHands[o3].concat(fullComm));
+      if (!oppFuture) continue;
+      var cmp2 = myFuture ? compareEval(myFuture, oppFuture) : -1;
+      if (cmp2 < 0) { futureResult = -1; break; }
+      if (cmp2 === 0) futureResult = Math.min(futureResult, 0);
+    }
+
     if (currentResult > 0) {
-      aheadNow++;
-      aheadTotal++;
+      aheadNow++; aheadTotal++;
       if (futureResult < 0) aheadToBehind++;
     } else if (currentResult < 0) {
-      behindNow++;
-      behindTotal++;
+      behindNow++; behindTotal++;
       if (futureResult > 0) behindToAhead++;
     } else {
       tiedNow++;
-      aheadTotal += 0.5;
-      behindTotal += 0.5;
+      aheadTotal += 0.5; behindTotal += 0.5;
       if (futureResult > 0) behindToAhead += 0.5;
       if (futureResult < 0) aheadToBehind += 0.5;
     }
@@ -946,7 +956,7 @@ function recommendPreflop(hand, s, result, toCall, position) {
 
 function recommendPostflop(hand, s, result, toCall, position) {
   var wp = winProbability(hand, s.communityCards, null);
-  var ehsData = computeEHS(hand, s.communityCards, 300);
+  var ehsData = computeEHS(hand, s.communityCards, 300, activeOpponents);
   var ehs = ehsData.ehs;
   var draws = detectDraws(hand, s.communityCards);
   var human = s.players[0];
@@ -1669,7 +1679,7 @@ class PokerGame {
 
     // ============ POSTFLOP ============
     var draws = detectDraws(ai.hand, s.communityCards);
-    var ehsData = computeEHS(ai.hand, s.communityCards, 250);
+    var ehsData = computeEHS(ai.hand, s.communityCards, 250, activeOpponents);
     var ehs = ehsData.ehs;
     var drawOuts = draws.outs;
     var drawStr = draws.drawStrength;
