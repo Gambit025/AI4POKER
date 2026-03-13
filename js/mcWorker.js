@@ -160,10 +160,10 @@ function computeEHS(myHand, communityCards, numSims) {
 self.onmessage = function (e) {
   var d = e.data;
   if (d.type === 'winProbability') {
-    var wp = winProbability(d.hand, d.community, d.sims || 500);
+    var wp = winProbability(d.hand, d.community, d.sims || 1500);
     self.postMessage({ id: d.id, type: 'winProbability', result: wp });
   } else if (d.type === 'computeEHS') {
-    var ehs = computeEHS(d.hand, d.community, d.sims || 400);
+    var ehs = computeEHS(d.hand, d.community, d.sims || 1000);
     self.postMessage({ id: d.id, type: 'computeEHS', result: ehs });
   }
 };

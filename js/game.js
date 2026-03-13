@@ -404,7 +404,7 @@ function requiredEquity(pot, toCall) {
   return toCall / (pot + toCall);
 }
 
-const MONTE_CARLO = 400;
+const MONTE_CARLO = 800;
 
 function winProbability(myHand, communityCards, opponentHand) {
   const need = 5 - communityCards.length;
