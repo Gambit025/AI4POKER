@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=9" />
+  <link rel="stylesheet" href="style.css?v=12" />
 </head>
 <body>
   <div class="app">
@@ -133,60 +133,62 @@
         <button type="button" class="btn-next-hand" id="btn-next-hand">下一局</button>
       </div>
 
-      <section id="analysis-panel" class="analysis-panel hidden">
-        <div class="analysis-in-game" id="analysis-in-game">
-          <div class="analysis-tags">
-            <span class="analysis-tag tag-position" id="advice-position">—</span>
-            <span class="analysis-tag tag-street" id="advice-street">—</span>
-            <span class="analysis-tag tag-hand" id="advice-hand-desc">—</span>
+      <div class="side-panel">
+        <section id="analysis-panel" class="analysis-panel hidden">
+          <div class="analysis-in-game" id="analysis-in-game">
+            <div class="analysis-tags">
+              <span class="analysis-tag tag-position" id="advice-position">—</span>
+              <span class="analysis-tag tag-street" id="advice-street">—</span>
+              <span class="analysis-tag tag-hand" id="advice-hand-desc">—</span>
+            </div>
+            <div class="analysis-win-row">
+              <span class="analysis-label">胜率</span>
+              <span class="analysis-value" id="advice-win">—%</span>
+              <span class="analysis-tier" id="advice-tier"></span>
+              <div class="progress-wrap"><div class="progress-bar" id="progress-win"></div></div>
+            </div>
+            <div class="analysis-draw-row hidden" id="row-draws">
+              <span class="draw-icon" id="draw-icon">♠</span>
+              <span class="draw-text" id="advice-draws">—</span>
+            </div>
+            <div class="advice-action-row">
+              <span class="advice-action" id="advice-action">—</span>
+            </div>
+            <div class="advice-coach" id="advice-coach">—</div>
           </div>
-          <div class="analysis-win-row">
-            <span class="analysis-label">胜率</span>
-            <span class="analysis-value" id="advice-win">—%</span>
-            <span class="analysis-tier" id="advice-tier"></span>
-            <div class="progress-wrap"><div class="progress-bar" id="progress-win"></div></div>
+          <div class="analysis-recap hidden" id="analysis-recap">
+            <div class="recap-showdown" id="recap-showdown"></div>
+            <div class="recap-grade-row" id="recap-grade-row">
+              <span class="recap-grade-badge" id="recap-grade-badge">B</span>
+              <span class="recap-grade-summary" id="recap-grade-summary"></span>
+            </div>
+            <div class="recap-chip-change" id="recap-chip-change"></div>
+            <div class="recap-decisions" id="recap-decisions"></div>
           </div>
-          <div class="analysis-draw-row hidden" id="row-draws">
-            <span class="draw-icon" id="draw-icon">♠</span>
-            <span class="draw-text" id="advice-draws">—</span>
-          </div>
-          <div class="advice-action-row">
-            <span class="advice-action" id="advice-action">—</span>
-          </div>
-          <div class="advice-coach" id="advice-coach">—</div>
-        </div>
-        <div class="analysis-recap hidden" id="analysis-recap">
-          <div class="recap-showdown" id="recap-showdown"></div>
-          <div class="recap-grade-row" id="recap-grade-row">
-            <span class="recap-grade-badge" id="recap-grade-badge">B</span>
-            <span class="recap-grade-summary" id="recap-grade-summary"></span>
-          </div>
-          <div class="recap-chip-change" id="recap-chip-change"></div>
-          <div class="recap-decisions" id="recap-decisions"></div>
-        </div>
-      </section>
+        </section>
 
-      <aside class="bottom-panel">
-        <div class="panel-row panel-row-pot">
-          <button type="button" class="panel-btn" data-frac="0.3">0.3 Pot</button>
-          <button type="button" class="panel-btn" data-frac="0.5">0.5 Pot</button>
-          <button type="button" class="panel-btn" data-frac="0.7">0.7 Pot</button>
-          <button type="button" class="panel-btn" data-frac="1">1.0 Pot</button>
-          <button type="button" class="panel-btn" data-frac="all">All In</button>
-        </div>
-        <div class="panel-row panel-row-mod">
-          <button type="button" class="panel-btn mod" id="btn-div3">÷3</button>
-          <button type="button" class="panel-btn mod" id="btn-div2">÷2</button>
-          <input type="number" class="panel-input" id="panel-bet-input" min="0" value="10" />
-          <button type="button" class="panel-btn mod" id="btn-x2">×2</button>
-          <button type="button" class="panel-btn mod" id="btn-x3">×3</button>
-        </div>
-        <div class="panel-row panel-row-actions">
-          <button type="button" class="panel-btn action fold" id="btn-fold">Fold</button>
-          <button type="button" class="panel-btn action call-bet" id="btn-call">Call $10</button>
-          <button type="button" class="panel-btn action check" id="btn-check">Check</button>
-        </div>
-      </aside>
+        <aside class="bottom-panel">
+          <div class="panel-row panel-row-pot">
+            <button type="button" class="panel-btn" data-frac="0.3">0.3 Pot</button>
+            <button type="button" class="panel-btn" data-frac="0.5">0.5 Pot</button>
+            <button type="button" class="panel-btn" data-frac="0.7">0.7 Pot</button>
+            <button type="button" class="panel-btn" data-frac="1">1.0 Pot</button>
+            <button type="button" class="panel-btn" data-frac="all">All In</button>
+          </div>
+          <div class="panel-row panel-row-mod">
+            <button type="button" class="panel-btn mod" id="btn-div3">÷3</button>
+            <button type="button" class="panel-btn mod" id="btn-div2">÷2</button>
+            <input type="number" class="panel-input" id="panel-bet-input" min="0" value="10" />
+            <button type="button" class="panel-btn mod" id="btn-x2">×2</button>
+            <button type="button" class="panel-btn mod" id="btn-x3">×3</button>
+          </div>
+          <div class="panel-row panel-row-actions">
+            <button type="button" class="panel-btn action fold" id="btn-fold">Fold</button>
+            <button type="button" class="panel-btn action call-bet" id="btn-call">Call $10</button>
+            <button type="button" class="panel-btn action check" id="btn-check">Check</button>
+          </div>
+        </aside>
+      </div>
 
       <div id="action-indicator" class="action-indicator hidden"></div>
     </div>
@@ -195,6 +197,6 @@
   <script src="js/seatPositions.js?v=2"></script>
   <script src="js/sounds.js?v=2"></script>
   <script src="js/game.js?v=5"></script>
-  <script src="js/app.js?v=7"></script>
+  <script src="js/app.js?v=8"></script>
 </body>
 </html>

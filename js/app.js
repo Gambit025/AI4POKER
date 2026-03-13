@@ -144,13 +144,7 @@
       seat.className = 'seat-item seat-' + side;
       seat.setAttribute('data-seat-index', seatPos);
       seat.setAttribute('data-player-index', i);
-      var seatLeft = pos.left;
-      if (side === 'left' || side === 'right') {
-        var origPct = parseFloat(pos.left);
-        if (side === 'left' && origPct < 6) seatLeft = '6%';
-        if (side === 'right' && origPct > 94) seatLeft = '94%';
-      }
-      seat.style.left = seatLeft;
+      seat.style.left = pos.left;
       seat.style.top = pos.top;
       var isHero = i === 0;
       var displayName = names[i] || ('Bot ' + i);
