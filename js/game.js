@@ -873,6 +873,7 @@ function positionAdvantageNote(position) {
 }
 
 function recommendPreflop(hand, s, result, toCall, position) {
+  var activeOpponents = s.players.filter(function(p, i) { return i !== 0 && !p.isFolded; }).length;
   var handStr = preflopHandStrength(hand);
   var wp = winProbability(hand, [], null);
   result.winProbability = wp;
@@ -955,6 +956,7 @@ function recommendPreflop(hand, s, result, toCall, position) {
 }
 
 function recommendPostflop(hand, s, result, toCall, position) {
+  var activeOpponents = s.players.filter(function(p, i) { return i !== 0 && !p.isFolded; }).length;
   var wp = winProbability(hand, s.communityCards, null);
   var ehsData = computeEHS(hand, s.communityCards, 300, activeOpponents);
   var ehs = ehsData.ehs;
@@ -1325,7 +1327,7 @@ class PokerGame {
     var bbPos = s.bbPosition;
     s.players.forEach(function (p) {
       p.hand = [];
-      p.isFolded = false;
+      p.isFolded = p.chips <= 0; // 筹码耗尽自动出局
       p.currentBet = 0;
       p.totalBetThisHand = 0;
       p.lastAction = null;
@@ -1337,8 +1339,8 @@ class PokerGame {
     }
     s.sbPosition = sbPos;
     s.bbPosition = bbPos;
-    var sbAmt = this.sb;
-    var bbAmt = this.bb;
+    var sbAmt = Math.min(this.sb, s.players[sbPos].chips);
+    var bbAmt = Math.min(this.bb, s.players[bbPos].chips);
     s.players[sbPos].chips -= sbAmt;
     s.players[sbPos].currentBet = sbAmt;
     s.players[sbPos].totalBetThisHand = sbAmt;
