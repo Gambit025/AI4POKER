@@ -115,7 +115,7 @@ body {
   grid-row: 1;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: space-between;
   min-height: 0;
   overflow: hidden;
 }
@@ -1098,6 +1098,20 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 .analysis-recap.hidden { display: none !important; }
+
+/* 复盘模式：撑满右侧面板 */
+.analysis-panel.recap-active {
+  flex: 1 1 0;
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.analysis-panel.recap-active .analysis-recap {
+  flex: 1;
+  max-height: none;
+  overflow-y: auto;
+}
 
 .recap-showdown {
   font-size: 0.66rem;

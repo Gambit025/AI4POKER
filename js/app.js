@@ -329,6 +329,7 @@
     var recapContentEl = document.getElementById('analysis-recap-content');
     if (s.handOver) {
       if (panel) panel.classList.remove('hidden');
+      if (panel) panel.classList.add('recap-active');
       if (analysisInGame) analysisInGame.classList.add('hidden');
       if (analysisRecap) analysisRecap.classList.remove('hidden');
       if (window.getHandRecap) {
@@ -378,6 +379,7 @@
       }
     } else {
       if (panel) panel.classList.toggle('hidden', !(isHumanTurn && currentSettings.aiAssist));
+      if (panel) panel.classList.remove('recap-active');
       if (analysisInGame) analysisInGame.classList.remove('hidden');
       if (analysisRecap) analysisRecap.classList.add('hidden');
       if (isHumanTurn && currentSettings.aiAssist) {
