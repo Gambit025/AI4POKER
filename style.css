@@ -61,6 +61,7 @@
 }
 
 /* ===== Reset & Base ===== */
+html { font-size: 18px; }
 * { box-sizing: border-box; }
 
 body {
@@ -743,13 +744,13 @@ body {
 
 .card.back {
   background:
-    repeating-conic-gradient(rgba(255,255,255,0.015) 0% 25%, transparent 0% 50%) 0 0 / 7px 7px,
-    linear-gradient(155deg, #182640 0%, #0e1830 50%, #091222 100%);
+    repeating-conic-gradient(rgba(255,255,255,0.04) 0% 25%, transparent 0% 50%) 0 0 / 7px 7px,
+    linear-gradient(155deg, #8b1428 0%, #6b0e1e 50%, #4a0a14 100%);
   color: transparent;
-  border: 1px solid rgba(212,168,67,0.12);
+  border: 1px solid rgba(180,30,50,0.35);
   box-shadow:
     0 2px 10px rgba(0,0,0,0.4),
-    inset 0 0 0 2px rgba(212,168,67,0.04);
+    inset 0 0 0 2px rgba(255,80,80,0.06);
   padding: 0;
   align-items: center;
   justify-content: center;
@@ -758,7 +759,7 @@ body {
   content: '♠';
   display: block;
   font-size: 13px;
-  color: rgba(212,168,67,0.1);
+  color: rgba(255,255,255,0.12);
   font-weight: 900;
 }
 
