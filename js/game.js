@@ -1209,7 +1209,7 @@ function calcRequiredStrength(baseLine, fear, threat, commitPressure, commitMod)
 
 function humanizedBetSize(pot, toCall, minRaise, ehs, aiCurrentBet, aiChips, communityCards, isBluff, bb, sizingMod, intent) {
   var drawiness = boardDrawiness(communityCards || []);
-  var initialStack = bb ? 100 * bb : 1000;
+  var initialStack = (aiCurrentBet + aiChips) || (bb ? 100 * bb : 1000);
   var potFraction;
 
   if (intent === 'value') {
@@ -1229,12 +1229,8 @@ function humanizedBetSize(pot, toCall, minRaise, ehs, aiCurrentBet, aiChips, com
   var targetBet = aiCurrentBet + addAmount;
   if (targetBet <= aiCurrentBet) targetBet = aiCurrentBet + minRaise;
 
-  var hardCap = initialStack * 2;
+  var hardCap = aiCurrentBet + aiChips;
   if (targetBet > hardCap) targetBet = hardCap;
-  if (targetBet <= aiCurrentBet) targetBet = aiCurrentBet + minRaise;
-
-  return targetBet;
-}
 
 function createGameState(initialChips, playerCount) {
   if (playerCount == null) playerCount = 2;
@@ -1557,29 +1553,65 @@ class PokerGame {
       return;
     }
 
-    var bestE = null;
-    var bestIdx = [];
-    for (var ai = 0; ai < active.length; ai++) {
-      var idx = active[ai].i;
-      var e = bestHand(s.players[idx].hand.concat(s.communityCards));
-      if (!e) continue;
-      if (!bestE) { bestE = e; bestIdx = [idx]; continue; }
-      var cmp = compareEval(bestE, e);
-      if (cmp < 0) { bestE = e; bestIdx = [idx]; }
-      else if (cmp === 0) bestIdx.push(idx);
-    }
-    if (bestIdx.length === 0) bestIdx = [active[0].i];
-    var share = Math.floor(s.pot / bestIdx.length);
-    var remainder = s.pot - share * bestIdx.length;
-    for (var wi = 0; wi < bestIdx.length; wi++) {
-      s.players[bestIdx[wi]].chips += share + (wi === 0 ? remainder : 0);
+    // 计算 side pots
+    var allPlayers = s.players.map(function (p, i) {
+      return { index: i, totalBet: p.totalBetThisHand || 0, isFolded: p.isFolded };
+    });
+    var sidePots = (function (players) {
+      var levels = [];
+      players.forEach(function (p) { if (p.totalBet > 0) levels.push(p.totalBet); });
+      levels = levels.filter(function (v, i, arr) { return arr.indexOf(v) === i; });
+      levels.sort(function (a, b) { return a - b; });
+      var pots = [];
+      var prevLevel = 0;
+      for (var li = 0; li < levels.length; li++) {
+        var level = levels[li];
+        var contributors = players.filter(function (p) { return p.totalBet > prevLevel; }).length;
+        var potSize = (level - prevLevel) * contributors;
+        var eligible = players.filter(function (p) { return !p.isFolded && p.totalBet >= level; })
+                               .map(function (p) { return p.index; });
+        if (potSize > 0 && eligible.length > 0) pots.push({ amount: potSize, eligible: eligible });
+        prevLevel = level;
+      }
+      return pots;
+    })(allPlayers);
+
+    // 如果没有计算出 side pots（数据异常），回退到直接平分
+    if (sidePots.length === 0) sidePots = [{ amount: s.pot, eligible: active.map(function (x) { return x.i; }) }];
+
+    var winnerMessages = [];
+    var allWinnerIndices = [];
+    for (var pi = 0; pi < sidePots.length; pi++) {
+      var pot = sidePots[pi];
+      var eligible = pot.eligible;
+      var bestE = null;
+      var bestIdx = [];
+      for (var ai = 0; ai < eligible.length; ai++) {
+        var idx = eligible[ai];
+        var e = bestHand(s.players[idx].hand.concat(s.communityCards));
+        if (!e) continue;
+        if (!bestE) { bestE = e; bestIdx = [idx]; continue; }
+        var cmp = compareEval(bestE, e);
+        if (cmp < 0) { bestE = e; bestIdx = [idx]; }
+        else if (cmp === 0) bestIdx.push(idx);
+      }
+      if (bestIdx.length === 0) bestIdx = [eligible[0]];
+      var share = Math.floor(pot.amount / bestIdx.length);
+      var remainder = pot.amount - share * bestIdx.length;
+      for (var wi = 0; wi < bestIdx.length; wi++) {
+        s.players[bestIdx[wi]].chips += share + (wi === 0 ? remainder : 0);
+      }
+      if (bestIdx.length > 1) {
+        winnerMessages.push(bestIdx.map(function (i) { return s.players[i].name; }).join('、') + ' 平分$' + pot.amount);
+      } else {
+        winnerMessages.push(s.players[bestIdx[0]].name + (sidePots.length > 1 ? ' 赢 $' + pot.amount : ' 获胜'));
+      }
+      bestIdx.forEach(function (wi) { if (allWinnerIndices.indexOf(wi) < 0) allWinnerIndices.push(wi); });
     }
     s.pot = 0;
-    s.winnerIndex = bestIdx[0];
-    s.winnerIndices = bestIdx;
-    s.message = bestIdx.length > 1
-      ? bestIdx.map(function (i) { return s.players[i].name; }).join('、') + ' 平分底池'
-      : s.players[bestIdx[0]].name + ' 获胜';
+    s.winnerIndex = allWinnerIndices[0] || active[0].i;
+    s.winnerIndices = allWinnerIndices;
+    s.message = winnerMessages.join('；');
     var n = s.players.length;
     s.dealerButtonIndex = (s.dealerButtonIndex + 1) % n;
   }
@@ -1601,7 +1633,7 @@ class PokerGame {
     var handStr = preflopHandStrength(ai.hand);
     var MAX_RAISES = 4;
     var raiseCapped = (s.raiseCountThisStreet || 0) >= MAX_RAISES;
-    var initialStack = s.bb ? 100 * s.bb : 1000;
+    var initialStack = (s.startingChips && s.startingChips[idx]) || (s.bb ? 100 * s.bb : 1000);
     var activeOpponents = 0;
     for (var i = 0; i < s.players.length; i++) {
       if (i !== idx && !s.players[i].isFolded) activeOpponents++;
@@ -1624,7 +1656,7 @@ class PokerGame {
         s.bb, st.sizingMod, intent);
       var minRaiseTo = ai.currentBet + toCall + s.minRaise;
       if (raiseTo < minRaiseTo) raiseTo = minRaiseTo;
-      var hardCap = initialStack * 2;
+      var hardCap = ai.currentBet + ai.chips;
       if (raiseTo > hardCap) raiseTo = hardCap;
       if (raiseTo <= ai.currentBet + toCall) {
         self.act('call');
