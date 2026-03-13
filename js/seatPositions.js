@@ -4,11 +4,11 @@
   var SEAT_POSITIONS = [
     { left: '50%',  top: '94%',  side: 'bottom' },  // 0: Hero bottom-center
     { left: '79%',  top: '80%',  side: 'bottom' },  // 1: bottom-right
-    { left: '92%',  top: '48%',  side: 'right'  },  // 2: right
+    { left: '96%',  top: '48%',  side: 'right'  },  // 2: right
     { left: '79%',  top: '15%',  side: 'top'    },  // 3: top-right
     { left: '50%',  top: '4%',   side: 'top'    },  // 4: top-center
     { left: '21%',  top: '15%',  side: 'top'    },  // 5: top-left
-    { left: '8%',   top: '48%',  side: 'left'   },  // 6: left
+    { left: '4%',   top: '48%',  side: 'left'   },  // 6: left
     { left: '21%',  top: '80%',  side: 'bottom' },  // 7: bottom-left
   ];
 

@@ -1008,7 +1008,7 @@ body {
 .analysis-tag {
   padding: 2px 8px;
   border-radius: 10px;
-  font-size: 0.58rem;
+  font-size: 0.7rem;
   font-weight: 600;
   line-height: 1.3;
   letter-spacing: 0.02em;
@@ -1024,10 +1024,10 @@ body {
   margin-bottom: 6px;
   flex-wrap: wrap;
 }
-.analysis-label { font-size: 0.66rem; color: var(--text-muted); font-weight: 500; }
-.analysis-value { font-size: 0.82rem; font-weight: 800; color: var(--text-primary); min-width: 30px; }
+.analysis-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
+.analysis-value { font-size: 1.0rem; font-weight: 800; color: var(--text-primary); min-width: 30px; }
 .analysis-tier {
-  font-size: 0.54rem;
+  font-size: 0.66rem;
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 8px;
@@ -1066,8 +1066,8 @@ body {
   border-radius: var(--radius-sm);
 }
 .analysis-draw-row.hidden { display: none !important; }
-.draw-icon { font-size: 0.78rem; }
-.draw-text { font-size: 0.64rem; color: var(--gold); font-weight: 500; }
+.draw-icon { font-size: 0.9rem; }
+.draw-text { font-size: 0.78rem; color: var(--gold); font-weight: 500; }
 
 .advice-action-row {
   display: flex;
@@ -1076,7 +1076,7 @@ body {
 }
 .advice-action {
   font-weight: 700;
-  font-size: 0.78rem;
+  font-size: 0.94rem;
   padding: 4px 14px;
   border-radius: 12px;
   display: inline-block;
@@ -1089,8 +1089,8 @@ body {
 .advice-action-bet { background: var(--green-dim); color: var(--green-bright); }
 
 .advice-coach {
-  font-size: 0.68rem;
-  line-height: 1.55;
+  font-size: 0.82rem;
+  line-height: 1.6;
   color: var(--text-secondary);
   padding: 8px 10px;
   background: rgba(255, 255, 255, 0.02);
@@ -1150,7 +1150,7 @@ body {
 .recap-grade-C { background: var(--gold-dim); color: var(--gold); border: 1px solid rgba(212,168,67,0.2); }
 .recap-grade-D { background: var(--red-dim); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
 .recap-grade-summary {
-  font-size: 0.68rem;
+  font-size: 0.82rem;
   line-height: 1.5;
   color: var(--text-secondary);
   flex: 1;
@@ -1200,7 +1200,7 @@ body {
   letter-spacing: 0.03em;
 }
 .recap-decision-action {
-  font-size: 0.66rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -1215,12 +1215,12 @@ body {
 .rating-good { background: var(--green-dim); color: var(--green-bright); }
 .rating-mistake { background: var(--red-dim); color: var(--red); }
 .recap-decision-analysis {
-  font-size: 0.64rem;
-  line-height: 1.5;
+  font-size: 0.78rem;
+  line-height: 1.55;
   color: var(--text-secondary);
 }
 .recap-decision-suggestion {
-  font-size: 0.62rem;
+  font-size: 0.76rem;
   line-height: 1.5;
   color: var(--blue);
   margin-top: 5px;
