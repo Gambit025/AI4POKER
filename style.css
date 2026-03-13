@@ -79,7 +79,7 @@ body {
 }
 
 .app {
-  max-width: 1100px;
+  max-width: 1300px;
   margin: 0 auto;
   height: 100vh;
   display: flex;
@@ -103,7 +103,7 @@ body {
 
 .game-screen {
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: 1fr 360px;
   grid-template-rows: 1fr;
   gap: 0;
 }
@@ -115,7 +115,7 @@ body {
   grid-row: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-end;
   min-height: 0;
   overflow: hidden;
 }
@@ -976,18 +976,26 @@ body {
 
 /* ===== AI Analysis Panel ===== */
 .analysis-panel {
-  flex: 0 1 auto;
+  flex: 1 1 0;
   min-height: 0;
-  max-height: 50%;
-  overflow-y: auto;
+  max-height: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   margin: 0;
-  padding: 12px 14px;
+  padding: 14px 16px 10px;
   background: var(--bg-card);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border-radius: var(--radius-md);
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-sm);
+}
+
+.analysis-in-game {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .analysis-tags {
@@ -1091,26 +1099,19 @@ body {
 
 /* ===== Recap Panel ===== */
 .analysis-recap {
-  margin-top: 4px;
-  max-height: 28vh;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  margin-top: 4px;
 }
 .analysis-recap.hidden { display: none !important; }
 
-/* 复盘模式：撑满右侧面板 */
+/* 复盘模式：recap-active class 保留兼容 */
 .analysis-panel.recap-active {
   flex: 1 1 0;
-  max-height: none;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.analysis-panel.recap-active .analysis-recap {
-  flex: 1;
-  max-height: none;
-  overflow-y: auto;
 }
 
 .recap-showdown {
@@ -1234,7 +1235,7 @@ body {
   background: var(--bg-elevated);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
-  border-top: 1px solid rgba(255,255,255,0.04);
+  border-top: 1px solid rgba(255,255,255,0.06);
 }
 
 .panel-row {
@@ -1365,8 +1366,8 @@ body {
 
 /* ===== Side Panel ===== */
 .side-panel {
-  background: linear-gradient(180deg, var(--bg-card) 0%, rgba(10,14,26,0.95) 100%);
-  border-left: 1px solid rgba(255,255,255,0.04);
+  background: linear-gradient(180deg, rgba(8,11,22,0.98) 0%, rgba(6,9,18,1) 100%);
+  border-left: 1px solid rgba(255,255,255,0.05);
   border-radius: 0;
 }
 .side-panel .analysis-panel {
@@ -1376,22 +1377,23 @@ body {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: none;
-  border-bottom: 1px solid rgba(255,255,255,0.03);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  padding: 16px 16px 12px;
 }
 .side-panel .bottom-panel {
   border-radius: 0;
-  padding: 10px 12px 14px;
+  padding: 12px 14px 16px;
   background: transparent;
   border-top: none;
 }
-.side-panel .panel-btn { padding: 8px 8px; font-size: 0.72rem; }
-.side-panel .panel-row-pot .panel-btn { padding: 6px 4px; font-size: 0.68rem; }
-.side-panel .panel-row-actions .panel-btn { padding: 12px 10px; font-size: 0.8rem; }
+.side-panel .panel-btn { padding: 8px 8px; font-size: 0.74rem; }
+.side-panel .panel-row-pot .panel-btn { padding: 7px 4px; font-size: 0.7rem; }
+.side-panel .panel-row-actions .panel-btn { padding: 14px 10px; font-size: 0.82rem; }
 
 /* ===== Responsive ===== */
 @media (min-width: 1300px) {
-  .app { max-width: 1200px; }
-  .game-screen { grid-template-columns: 1fr 360px; }
+  .app { max-width: 1440px; }
+  .game-screen { grid-template-columns: 1fr 400px; }
 }
 
 /* ===== Accessibility ===== */
