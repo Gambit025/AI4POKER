@@ -1019,10 +1019,14 @@ body {
 
 .analysis-win-row {
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.analysis-win-top {
+  display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 6px;
-  flex-wrap: wrap;
 }
 .analysis-label { font-size: 0.8rem; color: var(--text-muted); font-weight: 500; }
 .analysis-value { font-size: 1.0rem; font-weight: 800; color: var(--text-primary); min-width: 30px; }
@@ -1039,11 +1043,11 @@ body {
 .tier-weak { background: var(--red-dim); color: var(--red); }
 
 .progress-wrap {
-  height: 5px;
+  height: 7px;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
-  flex: 1;
+  width: 100%;
   min-width: 60px;
 }
 .progress-bar {

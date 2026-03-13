@@ -60,14 +60,14 @@
   }
 
   var game = null;
-  var PLAYER_COUNT = 2;
+  var PLAYER_COUNT = 8;
   var dealPhase = false;
   var prevCommunityLength = 0;
   var gameHasStarted = false;
   var sessionInitialChips = 0;
   var winSoundPlayed = false;
   var currentSettings = {
-    playerCount: 2,
+    playerCount: 8,
     speed: 'medium',
     sb: 5,
     bb: 10,
@@ -547,7 +547,7 @@
       for (var n = 2; n <= 8; n++) {
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'settings-choice' + (n === 2 ? ' active' : '');
+        btn.className = 'settings-choice' + (n === 8 ? ' active' : '');
         btn.setAttribute('data-players', n);
         btn.textContent = n + ' \u4EBA';
         playersEl.appendChild(btn);
