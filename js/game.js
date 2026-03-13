@@ -561,6 +561,18 @@ function getPosition(playerIndex, state) {
 var POSITION_OPEN_THRESHOLD = { EP: 0.48, MP: 0.40, LP: 0.28, SB: 0.36, BB: 0.22 };
 
 /**
+ * 按位置和活跃玩家数动态调整开注阈值。
+ * 人越多 EP/MP 需要越强的牌；LP 变化较小。
+ */
+function getOpenThreshold(position, numActivePlayers) {
+  var base = POSITION_OPEN_THRESHOLD[position] || 0.40;
+  if (!numActivePlayers || numActivePlayers <= 2) return base;
+  var perPlayer = { EP: 0.022, MP: 0.018, LP: 0.008, SB: 0.014, BB: 0.008 };
+  var inc = (perPlayer[position] || 0.015) * (numActivePlayers - 2);
+  return Math.min(0.82, base + inc);
+}
+
+/**
  * Detect draws in hand + community cards.
  * Returns { flushDraw, oesd, gutshot, comboDraw, outs, drawStrength }.
  */
@@ -859,7 +871,7 @@ function recommendPreflop(hand, s, result, toCall, position) {
   result.tier = tier.cls;
   var pct = Math.round(wp * 100);
   var handStrPct = Math.round(handStr * 100);
-  var openThresh = POSITION_OPEN_THRESHOLD[position] || 0.40;
+  var openThresh = getOpenThreshold(position, activeOpponents + 1);
   var posInfo = result.details.positionDesc;
   var handInfo = result.details.handDesc;
   var posNote = positionAdvantageNote(position);
@@ -893,7 +905,7 @@ function recommendPreflop(hand, s, result, toCall, position) {
 
   var betPressure = toCall / (s.pot + toCall);
   var BASE_FOLD_THRESH = { EP: 0.45, MP: 0.38, LP: 0.28, SB: 0.35, BB: 0.22 };
-  var baseFold = BASE_FOLD_THRESH[position] || 0.38;
+  var baseFold = getOpenThreshold(position, activeOpponents + 1) * 0.95;
   var effectiveThresh = baseFold + betPressure * 0.3;
   var potOddsPct = Math.round(result.requiredEquity * 100);
   var oppPressure = aggressorCount > 0 ? '已有 ' + aggressorCount + ' 人加注，对手范围较强，需要更好的牌才能继续。' : '';
@@ -1613,7 +1625,7 @@ class PokerGame {
 
     // ============ PREFLOP ============
     if (isPreflop) {
-      var openThresh = (POSITION_OPEN_THRESHOLD[position] || 0.40) * st.openMod;
+      var openThresh = getOpenThreshold(position, activeOpponents + 1) * st.openMod;
 
       if (toCall === 0) {
         if (!raiseCapped && handStr >= openThresh) {
@@ -1629,7 +1641,7 @@ class PokerGame {
       }
 
       var pfRequired = calcRequiredStrength(
-        (POSITION_OPEN_THRESHOLD[position] || 0.38) * st.foldMod,
+        getOpenThreshold(position, activeOpponents + 1) * st.foldMod,
         fear, threat, commit, st.commitMod
       );
 
