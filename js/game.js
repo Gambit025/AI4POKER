@@ -1327,7 +1327,7 @@ class PokerGame {
     var bbPos = s.bbPosition;
     s.players.forEach(function (p) {
       p.hand = [];
-      p.isFolded = p.chips <= 0; // 筹码耗尽自动出局
+      p.isFolded = false;
       p.currentBet = 0;
       p.totalBetThisHand = 0;
       p.lastAction = null;
@@ -1339,8 +1339,8 @@ class PokerGame {
     }
     s.sbPosition = sbPos;
     s.bbPosition = bbPos;
-    var sbAmt = Math.min(this.sb, s.players[sbPos].chips);
-    var bbAmt = Math.min(this.bb, s.players[bbPos].chips);
+    var sbAmt = this.sb;
+    var bbAmt = this.bb;
     s.players[sbPos].chips -= sbAmt;
     s.players[sbPos].currentBet = sbAmt;
     s.players[sbPos].totalBetThisHand = sbAmt;
