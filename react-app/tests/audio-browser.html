@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><title>AI4POKER 音效渲染检查</title>
+<style>body{font:16px system-ui;max-width:760px;margin:40px auto;padding:20px;background:#111827;color:#e5e7eb}button{padding:12px 20px}pre{white-space:pre-wrap;line-height:1.8}</style>
+<h1>音效离线渲染检查</h1><p>使用浏览器原生 OfflineAudioContext 生成采样，检查每种音效非静音、无非有限数值、无削波。不通过扬声器播放。</p><button id="run">运行音效渲染检查</button><pre id="results" role="status">等待运行</pre>
+<script type="module">
+import { PokerAudio } from '/src/audio/pokerAudio.ts';
+const result=document.querySelector('#results'),run=document.querySelector('#run');
+run.onclick=async()=>{
+  run.disabled=true;result.textContent='正在检查…';const reports=[];
+  try {
+    for(const kind of ['deal','flip','call','raise','check','fold','turn','win','end']) {
+      const offline=new OfflineAudioContext(1,44100,44100);
+      // The scheduler is exercised unchanged; only the offline transport reports running.
+      const context=new Proxy(offline,{get(target,key){if(key==='state')return 'running';const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;}});
+      const sound=new PokerAudio({createContext:()=>context,visible:()=>true});
+      sound.configure({enabled:true,volume:1});await sound.unlock();sound.play(kind);
+      const buffer=await offline.startRendering(),samples=buffer.getChannelData(0);
+      let peak=0,energy=0;
+      for(const sample of samples){if(!Number.isFinite(sample))throw Error(kind+' 包含无效采样');peak=Math.max(peak,Math.abs(sample));energy+=sample*sample;}
+      if(peak<=0||peak>1||energy===0)throw Error(kind+' 静音或削波');
+      reports.push('PASS '+kind+' · peak '+peak.toFixed(4)+' · RMS '+Math.sqrt(energy/samples.length).toFixed(4));await sound.dispose();
+    }
+    result.textContent=reports.join('\n')+'\n9/9 音效通过';
+  }catch(error){result.textContent=reports.join('\n')+'\nFAIL '+error.message;}finally{run.disabled=false;}
+};
+</script></html>
