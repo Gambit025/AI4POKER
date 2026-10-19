@@ -122,6 +122,7 @@ export interface Advice {
   summary:string;
   risk:string;
   facts:string;
+  analysisParts:{title:string;body:string}[];
   reasons:string[];
   alternatives:{action:string;reason:string}[];
   ranges:OpponentRangeSummary[];

@@ -46,3 +46,22 @@ test('seeded practice also seeds bot styles and dealing',()=>{
 });
 
 test('late position description does not mislabel the cutoff as the button',()=>{assert.equal(describePosition('LP'),'后位');});
+
+test('structured analysis describes a weak ace, button, public pressure and the actual remaining stack',()=>{
+  const {s}=table([200,1000,1000,1000]);s.players[0].hand=[c(14,'s'),c(4,'d')];
+  s.currentBet=100;s.players[1].currentBet=100;s.players[1].totalBetThisHand=100;s.players[1].chips=900;s.pot=110;
+  s.actionLog.push({street:0,player:1,name:'Robot A',action:'raise',amount:100,totalBet:100,addedAmount:95});
+  const a=recommend(s.players[0].hand,s,{random:rng(1)}),parts=a.analysisParts.map(p=>p.body).join(' ');
+  assert.match(parts,/弱踢脚 A/);assert.match(parts,/按钮位/);assert.match(parts,/加注至 100/);assert.match(parts,/跟注后余 100 筹码/);assert.match(parts,/不等于必须全下/);
+  s.players[1].hand=[c(2,'h'),c(3,'h')];s.deck.reverse();
+  assert.deepEqual(recommend(s.players[0].hand,s,{random:rng(1)}).analysisParts,a.analysisParts);
+});
+test('recap preserves contextual analysis before later board and stack changes',()=>{
+  const {g,s}=table();const a=g.getAdvice()!;g.act('fold');s.communityCards=[c(2,'s'),c(3,'s'),c(4,'s')];
+  assert.deepEqual(getHandRecap(s).decisions[0].analysisParts,a.analysisParts);
+});
+test('shared river hands are explained without inventing draws or private value',()=>{
+  const {s}=table();s.street=3;s.communityCards=[c(5,'h'),c(6,'c'),c(7,'s'),c(8,'h'),c(9,'d')];s.players[0].hand=[c(14,'s'),c(3,'d')];s.currentBet=0;
+  for(const p of s.players)p.currentBet=0;
+  const a=recommend(s.players[0].hand,s,{random:rng(1)});assert.match(a.analysisParts[0].body,/共享牌型/);assert.doesNotMatch(a.analysisParts[0].body,/成牌张/);assert.equal(a.betAmount,null);
+});
