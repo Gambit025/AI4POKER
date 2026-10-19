@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { PokerGame, bestHand, getHandRecap, HAND_RANK_ZH, handRankDisplayName } from '../engine/game.js';
 import type { GameState, Advice, HandRecap, GameConfig, Card } from '../engine/types';
 import { PokerAudio, readSoundPreferences, saveSoundPreferences } from '../audio/pokerAudio';
+import { dealPlan } from '../presentation/deal';
 import { soundEvents, type SoundSnapshot } from '../audio/soundEvents';
 
 const SUITS: Record<string, string> = { s:'♠', h:'♥', d:'♦', c:'♣' };
@@ -15,6 +16,10 @@ export function usePokerGame() {
   const [handRecap, setHandRecap] = useState<HandRecap | null>(null);
   const [handId, setHandId] = useState(0);
   const [isAIRunning, setIsAIRunning] = useState(false);
+  const [isDealing,setIsDealing]=useState(false);
+  const [dealSpeed,setDealSpeed]=useState('正常');
+  const dealingRef=useRef(false);
+  const dealTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
   const [isPaused, setIsPaused] = useState(false);
   const [volume, setVolumeState] = useState(() => readSoundPreferences().volume);
   const [actionError,setActionError]=useState('');
@@ -28,6 +33,10 @@ export function usePokerGame() {
   const pausedRef = useRef(false);
   const aiTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  function clearDeal() {
+    if(dealTimerRef.current!==null)clearTimeout(dealTimerRef.current);
+    dealTimerRef.current=null;dealingRef.current=false;setIsDealing(false);
+  }
   function clearTimer() {
     if (aiTimerRef.current !== null) clearTimeout(aiTimerRef.current);
     aiTimerRef.current = null;
@@ -54,7 +63,8 @@ export function usePokerGame() {
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
-      clearTimer(); 
+      clearTimer();
+      if(dealTimerRef.current!==null)clearTimeout(dealTimerRef.current);
       void audioRef.current?.dispose(); audioRef.current = null;
     };
   }, []);
@@ -65,10 +75,10 @@ export function usePokerGame() {
     const state = structuredClone(gameRef.current.getState());
     const snapshot: SoundSnapshot = {
       actions:state.actionLog.map(entry => ({action:entry.action})), boardCount:state.communityCards.length,
-      handOver:state.handOver, heroTurn:state.currentPlayerIndex === 0 && !state.handOver && !state.players[0].isFolded && state.players[0].hand.length === 2,
+      handOver:state.handOver, heroTurn:!newHand && !dealingRef.current && state.currentPlayerIndex === 0 && !state.handOver && !state.players[0].isFolded && state.players[0].hand.length === 2,
       heroWon:state.handOver && state.players[0].chips > (state.startingChips?.[0] ?? state.players[0].chips),
     };
-    for (const event of soundEvents(soundSnapshotRef.current, snapshot, newHand)) audioRef.current?.play(event.kind, event.delay);
+    if(!pausedRef.current)for (const event of soundEvents(soundSnapshotRef.current, snapshot, newHand)) audioRef.current?.play(event.kind, event.delay);
     soundSnapshotRef.current = snapshot;
     setGameState(state);
     return state;
@@ -81,7 +91,7 @@ export function usePokerGame() {
 
   function runAITurns(state: GameState) {
     clearTimer();
-    if (!gameRef.current) return;
+    if (!gameRef.current || dealingRef.current) return;
     if (state.handOver) {
       setHandRecap(getHandRecap(state)); setIsAIRunning(false); return;
     }
@@ -101,7 +111,7 @@ export function usePokerGame() {
     }, delay);
   }
   function createGame(nextConfig: GameConfig) {
-    clearTimer();  audioRef.current?.stop(); soundSnapshotRef.current = null;
+    clearTimer(); clearDeal(); audioRef.current?.stop(); soundSnapshotRef.current = null;
     pausedRef.current = false; setIsPaused(false); setIsAIRunning(false);
     configRef.current = nextConfig; setConfig(nextConfig);
     gameRef.current = new PokerGame(nextConfig.sb, nextConfig.bb, (nextConfig.startingBB ?? 100) * nextConfig.bb, nextConfig.playerCount);
@@ -110,12 +120,12 @@ export function usePokerGame() {
     unlockAudio(); syncState();
   }
   function leaveGame() {
-    clearTimer();  audioRef.current?.stop();
+    clearTimer(); clearDeal(); audioRef.current?.stop();
     soundSnapshotRef.current = null; gameRef.current = null;
     setIsAIRunning(false); setAdvice(null); 
   }
   function startNewHand() {
-    if (!gameRef.current || pausedRef.current) return;
+    if (!gameRef.current || pausedRef.current || dealingRef.current) return;
     const old = gameRef.current.getState();
     if (old.players[0].hand.length === 2 && !old.handOver) return;
     clearTimer();  audioRef.current?.stop(); unlockAudio();
@@ -123,10 +133,19 @@ export function usePokerGame() {
     if (!gameRef.current.startNewHand()) return;
     const state = syncState(true);
     setHandId(prev => prev + 1);
-    if (state) runAITurns(state);
+    if (state) {
+      const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      setDealSpeed(configRef.current.speed);
+      if(reduced){const ready=syncState();if(ready)runAITurns(ready);return;}
+      dealingRef.current=true;setIsDealing(true);
+      dealTimerRef.current=setTimeout(()=>{
+        dealTimerRef.current=null;dealingRef.current=false;setIsDealing(false);
+        const ready=syncState();if(ready)runAITurns(ready);
+      },dealPlan(state,configRef.current.speed).duration);
+    }
   }
   function act(action: string, amount?: number) {
-    if (!gameRef.current || pausedRef.current) return;
+    if (!gameRef.current || pausedRef.current || dealingRef.current) return;
     const state = gameRef.current.getState();
     if (state.handOver || state.currentPlayerIndex !== 0 || state.players[0].hand.length !== 2 || state.players[0].isFolded) return;
     unlockAudio(); if (!gameRef.current.act(action, amount)) {setActionError(gameRef.current.lastError);return;}
@@ -173,7 +192,7 @@ export function usePokerGame() {
     return evaluated ? HAND_RANK_ZH[evaluated.rank] || handRankDisplayName(evaluated.rank) : null;
   }
   return {
-    gameState, advice, actionError, handRecap, handId, isAIRunning, isPaused, config, volume, audioUnavailable,
+    gameState, advice, actionError, handRecap, handId, isAIRunning, isDealing, dealSpeed, isPaused, config, volume, audioUnavailable,
     createGame, leaveGame, startNewHand, act, togglePause, toggleSound, previewSound, setVolume, setSpeed,
     fold:() => act('fold'), check:() => act('check'), call:() => act('call'), raise:(amount:number) => act('raise',amount),
     getLegalActions:() => gameRef.current?.getLegalActions() ?? null,

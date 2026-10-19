@@ -61,3 +61,10 @@ These are practical references, not a claim that a single website has a verified
 ## Persistent user preference · 2026-10-19
 
 Prefer fewer small words: omit ornamental eyebrows, duplicate footer brands, motivational taglines, redundant section subtitles and footnotes. Keep necessary controls, values and useful coaching analysis. Do not reintroduce text the user explicitly removed. Keep only “made by 秦睿涵Ryan” in the footer. Home header copy is “世界上学习德州扑克最好的地方”; setup switch is “AI教练辅助”. This preference is also recorded in .cursor/rules/website-design.mdc.
+
+## Dealing and visible private cards · 2026-10-19
+
+- Two clockwise dealing rounds animate from the center using only transforms/opacity. Fast/normal/slow adjust staggering; each flight is 180ms. Reduced-motion users receive cards immediately.
+- AI and player actions wait until dealing finishes. Leaving the game cancels its deal timer; pausing prevents action advancement while the visual deal settles.
+- Hero sees two face-up cards. Opponents receive two generic card backs; their actual cards are not passed into the hidden-card component or DOM labels. Folded opponents remain face down and dimmed.
+- Opponent cards fit inside the seat header to preserve action and amount readability on 320×568 eight-player tables. Genuine showdown reveals live hands; river fold wins do not reveal opponents.
