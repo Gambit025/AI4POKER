@@ -12,11 +12,11 @@ import { CoachPanel, RecapPanel } from './components/CoachPanel';
 import type { GameConfig, Card, GameState } from './engine/types';
 
 export default function App() {
-  const [guided,setGuided]=useState(false),[view,setView]=useState<'settings'|'game'>('settings');
+  const [guided,setGuided]=useState(false),[view,setView]=useState<'home'|'settings'|'game'>('home');
   const game=usePokerGame();
   useEffect(()=>{window.scrollTo({top:0});},[view]);
   function start(config:GameConfig,tutorial=false){setGuided(tutorial);game.createGame(config);setView('game');}
-  return view==='settings'?<SessionSetup onStart={start}/>:<GameView game={game} guided={guided} onGuideChange={setGuided} onBack={()=>{game.leaveGame();setView('settings');}}/>;
+  return view!=='game'?<SessionSetup onStart={start} initialScreen={view==='home'?'cover':'settings'} initialConfig={game.config}/>:<GameView game={game} guided={guided} onGuideChange={setGuided} onBack={()=>{game.leaveGame();setView('settings');}}/>;
 }
 type Panel='coach'|'history'|'rules'|'guide';
 const panelNames:Record<Panel,string>={coach:'教练',history:'记录',rules:'规则',guide:'教学'};

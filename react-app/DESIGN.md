@@ -50,3 +50,10 @@ These are practical references, not a claim that a single website has a verified
 - Keep existing practice choices on the right; remove only the home sound setting. Preserve stored sound preferences and in-game controls.
 - Compact desktop spacing verified at 1280×720 and 1366×768 with no document overflow. Mobile stacks the cover and settings without horizontal scrolling.
 - Footer credit: made by 秦睿涵Ryan.
+
+## Town-inspired cover and separate setup · 2026-10-19
+
+- Inspected https://www.siteinspire.com/website/13643-town visually. Adapted its warm light canvas, large serif statements, opposite-corner composition and space around a central entry action; retained original poker graphics and branding.
+- Home headline: “Learn how to play with AI, then play your opponents.” The cover exposes one central “start playing” action.
+- Flow: cover → settings → game. Settings retain all existing practice choices and the beginner lesson. Game return goes directly to settings and preserves the last configuration. Footer credit remains on both pages.
+- Mobile cover checked at 320×568 with no overflow; desktop cover/setup checked at 1280×720. Settings use a vertical mobile layout, with beginner entry after the configuration.
