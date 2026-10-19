@@ -2,7 +2,7 @@
 
 德州扑克新手练习，React + TypeScript 版。
 
-在线地址：https://gambit025.github.io/AI4POKER/
+在线地址：https://ai4poker.pages.dev/
 
 支持 2–8 人虚拟筹码练习、新手第一局、行为范围教练、决策复盘、全下/边池、音效和手机布局。教练为启发式范围建议，未经求解器校准。
 
@@ -18,6 +18,6 @@ npm test
 npm run build:pages
 ```
 
-发布时，将 `react-app/dist/` 的内容复制到仓库根目录并提交至 `main`。已有 GitHub Pages 配置从 `main` 根目录发布，网址保持不变。
+正式网站由 Cloudflare Pages 自动发布：main 分支、根目录 react-app、构建命令 npm run build、输出 dist。更新 react-app/ 源码后提交推送即可触发构建。根目录静态文件保留用于历史 GitHub Pages 版本。
 
 规则边界和模型限制见 [RULES.md](react-app/RULES.md)。

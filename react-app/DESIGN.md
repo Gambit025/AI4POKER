@@ -43,3 +43,10 @@ These are practical references, not a claim that a single website has a verified
 
 - Seat action text and amount are separate: warm chip badges for bets/raises, blue for calls and neutral for blinds. “加注至” uses the round target; “跟注 +” uses the chips added. Round and hand totals remain below.
 - Coach reasoning (cost, position/depth and range evidence) is visible by default. Detailed opponent combinations and alternatives stay expandable. Recap also exposes the original cost context before expanded details.
+
+## Home cover · 2026-10-19
+
+- Dark editorial cover with oversized AI 4 POKER typography, champagne gold accents and code-native playing cards. No image downloads or new dependencies.
+- Keep existing practice choices on the right; remove only the home sound setting. Preserve stored sound preferences and in-game controls.
+- Compact desktop spacing verified at 1280×720 and 1366×768 with no document overflow. Mobile stacks the cover and settings without horizontal scrolling.
+- Footer credit: made by 秦睿涵Ryan.
