@@ -1,3 +1,4 @@
+import { explainDraws } from './drawAnalysis.js';
 import { buildOpponentRanges, makeRangeSampler, makeImportanceSampler, validRangeCombos } from './ranges.js';
 import { inHand, livePlayers, betToMatch, legalActions, buildPots, callPotContext, clockwise, mergeEquivalentPots } from './rules.js';
 /**
@@ -513,8 +514,14 @@ function recommend(hand,s,options={}) {
     const rangeText=pressure?`${pressureRange.name.replace(/^Robot /,'对手 ')} 本轮${pressure.action==='raise'?'加注至':'下注'} ${pressure.totalBet??pressure.amount}。${pressureRange.evidence} ${pressureRange.explanation}`:
         `${ranges.length} 名对手仍在局。${hasEvidence?'已按各人的公开行动更新范围；过牌仍可能包含强牌。':'尚无足够自愿行动，保留宽范围；不能因为对手还没下注就认定其牌弱。'}`;
     const afterCall=Math.max(0,hero.chips-context.cost);
+    const drawExplanation=explainDraws(hand,s.communityCards,{cost:context.cost,allIn:allInCall||ranges.every(r=>s.players[r.player].isAllIn)});
+    if(draw.outs===0&&drawExplanation?.startsWith('后门')&&made?.rank<=1&&!hasPrivateValue(hand,s.communityCards)){
+      if(!legal.toCall)summary='目前只有后门成牌机会；先免费过牌，不为追牌扩大底池。';
+      else if(action==='优先弃牌')summary='后门机会有限，当前范围估算也不足以覆盖跟注成本，优先弃牌。';
+    }
     const analysisParts=[
       {title:'手牌与牌面',body:handText},
+      ...(drawExplanation?[{title:'听牌与追牌判断',body:drawExplanation}]:[]),
       {title:'位置与对手',body:`你在${posLabel}，最大有效筹码约 ${Math.round(effectiveBB)} BB。${index===s.dealerButtonIndex?'翻后通常最后行动，更容易看到对手选择。':position==='SB'?'翻后通常较早行动，边缘牌更难控制底池。':position==='EP'?'后面仍有多人可行动，进入底池应更谨慎。':'实际行动顺序还取决于盲位和仍在局的玩家。'}${rangeText} 位置改变范围假设，但不能确定对手具体拿什么牌。`},
       {title:'这次投入是否值得',body:`${facts} 模型估计底池份额 ${Math.round(model.equity*100)}%，${hasEvidence?`范围与行动情景下约 ${Math.round(low*100)}–${Math.round(high*100)}%，不是置信区间。`:'目前缺少行动信息，这个数字不能当作精确胜率。'}${legal.toCall?`无后续下注模型的跟注净期望约 ${Math.round(evLow)} 至 ${Math.round(evHigh)} 筹码。`:''}`},
       {title:betAmount?'下注尺度与后续':'后续计划',body:betAmount?`本轮总投入至 ${betAmount}，本次再投入 ${Math.max(0,betAmount-hero.currentBet)}。${s.street===0?(limpers?'跟入者增加，隔离尺寸相应提高；仍需他们愿意用更弱牌继续。':'这是启发式开池尺寸，不能据此认定为最优尺寸。'):'目标是让更弱牌跟注；面对再加注，重新判断范围。'}`:
@@ -524,7 +531,7 @@ function recommend(hand,s,options={}) {
     return {action,betAmount,coach:[facts,...reasons,cautions].join(' '),winProbability:model.equity,tier:winTier(model.equity).cls,requiredEquity:context.requiredEquity,
       summary,risk,analysisParts,reasons,alternatives,facts,cautions,ranges:ranges.map(({combos,...range})=>range),sensitivity:{low,high,evLow,evHigh},
       details:{street:String(s.street),streetName:['翻前','翻牌','转牌','河牌'][s.street],handDesc:describeHand(hand),handStrength:null,position,positionDesc:describePosition(position),
-        drawInfo:draw.outs?`${draw.outs} 张潜在顺子/同花成牌张，部分可能不是胜出张。`:null,drawIcon:'♠',ehs:null,potOdds:context.requiredEquity,spr,effectiveBB,remainingBB,callCost:context.cost,limpers,opponentsBetting:countAggressors(s),opponents:ranges.length,samples:model.samples,exact:model.exact,model:'行为加权范围',callEV:ev}};
+        drawInfo:drawExplanation,drawIcon:'♠',ehs:null,potOdds:context.requiredEquity,spr,effectiveBB,remainingBB,callCost:context.cost,limpers,opponentsBetting:countAggressors(s),opponents:ranges.length,samples:model.samples,exact:model.exact,model:'行为加权范围',callEV:ev}};
 }
 function winTier(wp) { return wp >= 0.65 ? { cls: 'strong' } : wp >= 0.45 ? { cls: 'good' } : wp >= 0.3 ? { cls: 'marginal' } : { cls: 'weak' }; }
 function createPlayer(name, chips, isHuman, style) {
