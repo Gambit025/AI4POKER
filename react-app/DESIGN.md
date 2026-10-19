@@ -67,4 +67,17 @@ Prefer fewer small words: omit ornamental eyebrows, duplicate footer brands, mot
 - Two clockwise dealing rounds animate from the center using only transforms/opacity. Fast/normal/slow adjust staggering; each flight is 180ms. Reduced-motion users receive cards immediately.
 - AI and player actions wait until dealing finishes. Leaving the game cancels its deal timer; pausing prevents action advancement while the visual deal settles.
 - Hero sees two face-up cards. Opponents receive two generic card backs; their actual cards are not passed into the hidden-card component or DOM labels. Folded opponents remain face down and dimmed.
-- Opponent cards fit inside the seat header to preserve action and amount readability on 320×568 eight-player tables. Genuine showdown reveals live hands; river fold wins do not reveal opponents.
+- Opponent cards use classic red backs in an independent area in front of each seat, toward the table center. Names, actions, current-round totals and hand totals remain in the seat. The eight-seat mobile layout is checked at 320×568 and 360×640 without card/seat overlaps. Genuine showdown reveals live hands; river fold wins do not reveal opponents.
+- Coach analysis explains the actual hand and board, public pressure and position, capped call cost, remaining stack, and suggested total versus newly added chips. Recap preserves these sections from the decision time; uncertain range estimates remain explicitly heuristic.
+
+## Draw judgment · 2026-10-19
+
+The main coach analysis explicitly separates one-card draws from backdoor paths, next-card odds from river completion odds, and completion from winning. Public runout enumeration uses only hero cards and board; weighted showdown equity remains separate. Show costs and paired-board risks, preserve decision-time analysis in recap, and avoid encouraging a call solely for a backdoor chance. Screenshot regression: 8c5h on 7sTs7d has 48/1081 (4.44%) straight runouts via 4+6, 6+9 or 9+J, with zero next-card straight outs.
+
+## Common-hand coaching and author placement · 2026-10-19
+
+- Cover credit now appears only in the header right: made by **秦睿涵Ryan**. No footer credit. This supersedes previous cover/footer copy preferences.
+- Coach names top/middle/bottom pair, overpairs, shared pairs and sets; enumerates next-card and river pair/trips/full-house upgrades, alongside straight/flush draws. Events can overlap and are never added as win probabilities.
+- Call-price box separates actual legal call from a frozen-pot break-even benchmark. Suppress a single benchmark for all-ins/unequal pool eligibility, retain pool-weighted expectation and short-call cost. Benchmarks exclude future betting and are not safe budgets.
+- Fixed the all-in decision buffer that previously labeled a materially negative A4o short-stack call as borderline. Fixed river copy that suggested another card or implied odds; low one-card flush draws explain domination risk.
+- Manual play: one three-player hand and two heads-up hands, including top pair, low flush draw, bottom pair facing a river bet, position rotation, and decision-time recap. Seeded audit: 54 hands across 10/20/100 BB and all position groups; 117 decisions after the all-in fix.

@@ -48,6 +48,10 @@ export function explainDraws(hand,board,{cost=0,allIn=false}={}){
   }
   if(!parts.length)parts.push('目前没有需要补牌才完成的自有顺子或同花听牌；其他改善需按当前牌型判断。');
   if(d.straight&&d.flush)parts.push(`顺子/同花有重叠，不能相加；至少形成其中一种的河牌概率约 ${pct(d.combined.riverProbability)}。`);
+  if(d.flush){
+    const suit=suits.find(s=>board.filter(c=>c.suit===s).length>=3&&hand.filter(c=>c.suit===s).length===1);
+    if(suit){const h=hand.find(c=>c.suit===suit),name=({s:'黑桃',h:'红桃',d:'方块',c:'梅花'})[suit];parts.push(`你仅持一张${name} ${rank(h.rank)} 来听花。${h.rank===14?'补成后是 A 高同花，但仍需防同花顺及配对牌面的葫芦、四条。':'这是单张手牌听花；对手若持更高的同花色牌，成花也可能输，不能把全部成牌张都算作胜出张。'}`);}
+  }
   if(d.combined){
     parts.push('这是仅按手牌与公共牌、未知牌等可能计算的成牌率，不是获胜率；未按对手范围调整剩余牌分布。');
     if(new Set(board.map(c=>c.rank)).size<board.length)parts.push('牌面已配对，成顺或成同花仍可能输给葫芦、四条；成牌张不能全算作胜出张。');

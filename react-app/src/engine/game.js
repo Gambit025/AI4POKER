@@ -1,3 +1,5 @@
+import { describeMade, explainImprovement } from './improvementAnalysis.js';
+import { callPrice, explainCallPrice } from './callPrice.js';
 import { explainDraws } from './drawAnalysis.js';
 import { buildOpponentRanges, makeRangeSampler, makeImportanceSampler, validRangeCombos } from './ranges.js';
 import { inHand, livePlayers, betToMatch, legalActions, buildPots, callPotContext, clockwise, mergeEquivalentPots } from './rules.js';
@@ -114,7 +116,7 @@ function getHandRecap(s) {
       decisions:(s.heroDecisions??[]).map(d=>({streetName:['翻前','翻牌','转牌','河牌'][d.street],actual:`${names[d.action]}${d.actualAmount?` ${d.actualAmount}`:''}${d.allIn?' · 全下':''}`,
         takeaway:d.action==='fold'?(d.advice?.action==='优先弃牌'?d.advice.summary:'放弃底池、保留后手；是否过紧取决于当时的对手范围。'):d.action==='check'?'免费保留参与权，不必为了继续而下注。':d.action==='call'?(d.advice?.action==='优先弃牌'?'当时估算偏向弃牌；继续需有对手范围更宽的依据。':d.advice?.summary):'主动扩大底池；需明确价值目标或弃牌率依据。',risk:d.advice?.risk??'',
         rating:'good',ratingIcon:'·',ratingLabel:'决策记录',analysis:d.advice?.facts??d.coach,
-        analysisParts:d.advice?.analysisParts??[],reasons:d.advice?.reasons??[],alternatives:d.advice?.alternatives??[],ranges:d.advice?.ranges??[],sensitivity:d.advice?.sensitivity,
+        pricing:d.advice?.pricing,analysisParts:d.advice?.analysisParts??[],reasons:d.advice?.reasons??[],alternatives:d.advice?.alternatives??[],ranges:d.advice?.ranges??[],sensitivity:d.advice?.sensitivity,
         chosenReason:d.advice?.alternatives.find(a=>a.kind===(d.action==='raise'||d.action==='bet'?'raise':d.action))?.reason??(d.action==='raise'||d.action==='bet'?'主动增加投入。需要思考：哪些更弱的牌会跟注，或哪些更强的牌会弃牌；该模型未证明这一尺寸最优。':''),
         suggestion:`当时参考：${d.recommended}${d.recommendedAmount?`至 ${d.recommendedAmount}`:''}。${d.advice?.cautions??'策略建议并非唯一正确打法。'}`})),
       showdownSummary:[...(s.settledPots??[]).map((pot,i)=>`${i===0?'主池':`边池 ${i}`} ${pot.amount}：${pot.awards.map(a=>`${s.players[a.player].name} 获得 ${a.amount}`).join('；')}`),...(s.refunds??[]).map(r=>`${s.players[r.player].name} 未获跟注的 ${r.amount} 已退回。`)].join('\n')};
@@ -479,18 +481,18 @@ function recommend(hand,s,options={}) {
     const spr=s.pot>0?Math.max(0,Number.isFinite(remainingEffective)?remainingEffective:hero.chips)/s.pot:0;
     const unopened=s.street===0&&!s.actionLog.some(e=>e.action==='raise'||e.action==='bet');
     const margin=Math.max(2,context.contestable*0.06),close=legal.toCall>0&&evLow<=margin&&evHigh>=-margin;
-    let action=legal.toCall?(evLow>margin?'评估跟注':evHigh < -margin?'优先弃牌':'谨慎决策'):'过牌',betAmount=null;
+    let action=legal.toCall?(evLow>margin?'评估跟注':(evHigh < -margin||(context.cost===s.players[index].chips&&evHigh < -Math.max(2,context.cost*0.03)))?'优先弃牌':'谨慎决策'):'过牌',betAmount=null;
     const limpers=new Set(s.actionLog.filter(e=>e.street===0&&e.action==='call'&&e.player!==index).map(e=>e.player)).size;
     const openingThreshold=Math.min(0.9,(position==='EP'?0.76:position==='MP'?0.69:position==='SB'?0.66:0.61)+Math.max(0,limpers-1)*0.035);
     if(unopened&&legal.canFullRaise&&score>=openingThreshold){action='加注';betAmount=Math.min(legal.maxRaiseTo,Math.max(legal.minRaiseTo,Math.round(((effectiveBB<=25?2.2:2.5)+limpers)*(s.bb??10))));}
     const made=s.communityCards.length>=3?bestHand([...hand,...s.communityCards]):null;
     if(!legal.toCall&&s.street>0&&legal.canFullRaise&&low>0.7&&made?.rank>=1&&hasPrivateValue(hand,s.communityCards)){action='考虑价值下注';betAmount=Math.min(legal.maxRaiseTo,Math.max(legal.minRaiseTo,Math.round(s.pot*0.5)));}
     let facts=legal.toCall?`需补 ${legal.toCall}，实际跟注 ${context.cost}；跟注后可争夺 ${context.contestable}，无后续下注的简化门槛 ${Math.round(context.requiredEquity*100)}%。`:'当前无需补筹码，可以免费过牌。';
-    if(legal.toCall)facts+=' 假设其他在局玩家继续，未计其后新增筹码与后续街成本。';
+    if(legal.toCall)facts+=s.street<3?' 假设其他在局玩家继续，未计其后新增筹码与后续街成本。':' 假设其他在局玩家继续；河牌已无后续街。';
     if(new Set(context.pots.map(p=>p.eligible.join(','))).size>1)facts+=' 分池资格不同，须按各池加权，不能直接用总份额比较门槛。';
     const reasons=[`${describePosition(position)}，最大有效筹码约 ${Math.round(effectiveBB)} BB；当前最大有效 SPR ${spr.toFixed(1)}。`,
         ranges.some(r=>r.informed)?'按各对手的位置、自愿行动和下注尺度更新组合权重；范围中仍包含诈唬与听牌。':'对手尚无足够自愿行动，暂保留宽范围，不能按位置凭空收窄。',
-        hero.chips/(s.bb??10)<=20?'短筹码减少投机牌的隐含赔率空间；低 SPR 也不代表必须全下。':'筹码较深，边缘牌需要考虑后续街的成本，不能只比较当前赔率。'];
+        s.street===3?'河牌不再有改善机会，比较当前摊牌牌力、对手范围与下注价格。':hero.chips/(s.bb??10)<=20?'短筹码减少投机牌的隐含赔率空间；低 SPR 也不代表必须全下。':'筹码较深，边缘牌需要考虑后续街的成本，不能只比较当前赔率。'];
     const alternatives=[
       {action:'弃牌',kind:'fold',reason:legal.toCall?'保留剩余筹码；若对手比模型更紧、多人下注或跟注需要承担后续成本，弃牌更有吸引力。':'可以免费过牌时，无需为了结束行动而弃牌。'},
       {action:legal.toCall?'跟注':'过牌',kind:legal.toCall?'call':'check',reason:legal.toCall?`范围变化下跟注模型净期望约 ${Math.round(evLow)} 至 ${Math.round(evHigh)}；${close?'跨越或接近盈亏边界，需更多范围信息。':'仍依赖范围假设，正值不保证实际盈利。'}`:'不增加投入，保留较弱对手牌；强牌也可过牌保护过牌范围，不应只凭过牌推断弱牌。'},
@@ -503,12 +505,12 @@ function recommend(hand,s,options={}) {
     if(pendingScenario&&action==='谨慎决策')summary='身后玩家尚未行动；其跟入或弃牌会改变判断，先考虑范围与位置。';
     if(!legal.raiseReopened)summary='短全下尚未重开加注权，只能跟注或弃牌。';
     if(action==='优先弃牌'&&legal.toCall>=8*(s.bb??10))summary='面对大额加注，当前范围下继续的代价偏高。';
-    let risk=allInCall?`跟注将投入全部剩余 ${context.cost}；仅争夺自己覆盖的底池。`:legal.toCall>0&&context.cost>=hero.chips/2?`这次跟注用掉至少一半后手；不能把份额当作盈利保证。`:remainingBB<=20?'短筹码少依赖隐含赔率，无需机械全下。':'';
+    let risk=allInCall?`跟注将投入全部剩余 ${context.cost}；仅争夺自己覆盖的底池。`:legal.toCall>0&&context.cost>=hero.chips/2?`这次跟注用掉至少一半后手；不能把份额当作盈利保证。`:remainingBB<=20&&s.street<3?'短筹码少依赖隐含赔率，无需机械全下。':'';
     if(!legal.toCall&&made?.rank>=1&&!hasPrivateValue(hand,s.communityCards))summary='公共牌已成牌，不能据此认定自己能向弱牌取值；先过牌。';
     const posLabel=index===s.dealerButtonIndex?'按钮位':describePosition(position);
     const ownPair=hand[0].rank===hand[1].rank;
     const handText=s.street===0?`${handToStr(hand)}，${ownPair?'口袋对子':hand[0].suit===hand[1].suit?'同花手牌':'非同花手牌'}。${!ownPair&&Math.max(...hand.map(c=>c.rank))===14&&Math.min(...hand.map(c=>c.rank))<=8?'弱踢脚 A 容易被更好的 A 压制，不能只因为有 A 就继续。':ownPair?'对子也会遇到更高对子；多人底池中，未改善的小对子要控制投入。':'翻前强度不等于翻后一定领先，需要结合位置和进入底池的代价。'}`:
-        `${handToStr(hand)}；当前最佳五张为${HAND_RANK_ZH[made.rank]}。${made.rank>=1&&!hasPrivateValue(hand,s.communityCards)?'成牌主要来自公共牌，不能把共享牌型当作自己的价值优势。':'牌型名称只说明绝对强度，是否领先仍取决于对手范围与踢脚。'}${draw.outs?`另有 ${draw.outs} 张潜在顺子/同花成牌张，部分会让对手成更强牌，不能全部当作干净胜出张。`:''}`;
+        `${handToStr(hand)}；${describeMade(hand,s.communityCards,bestHand)}${made.rank>=1&&!hasPrivateValue(hand,s.communityCards)?'成牌主要来自公共牌，不能把共享牌型当作自己的价值优势。':'牌型名称只说明绝对强度，是否领先仍取决于对手范围与踢脚。'}${draw.outs?`另有 ${draw.outs} 张潜在顺子/同花成牌张，部分会让对手成更强牌，不能全部当作干净胜出张。`:''}`;
     const pressure=[...s.actionLog].reverse().find(e=>e.street===s.street&&e.player!==index&&ranges.some(r=>r.player===e.player)&&['raise','bet'].includes(e.action));
     const pressureRange=pressure?ranges.find(r=>r.player===pressure.player):null;
     const rangeText=pressure?`${pressureRange.name.replace(/^Robot /,'对手 ')} 本轮${pressure.action==='raise'?'加注至':'下注'} ${pressure.totalBet??pressure.amount}。${pressureRange.evidence} ${pressureRange.explanation}`:
@@ -516,20 +518,24 @@ function recommend(hand,s,options={}) {
     const afterCall=Math.max(0,hero.chips-context.cost);
     const drawExplanation=explainDraws(hand,s.communityCards,{cost:context.cost,allIn:allInCall||ranges.every(r=>s.players[r.player].isAllIn)});
     if(draw.outs===0&&drawExplanation?.startsWith('后门')&&made?.rank<=1&&!hasPrivateValue(hand,s.communityCards)){
-      if(!legal.toCall)summary='目前只有后门成牌机会；先免费过牌，不为追牌扩大底池。';
+      if(!legal.toCall)summary='顺子或同花仅有后门机会；可以免费过牌，观察手牌配对等改善。';
       else if(action==='优先弃牌')summary='后门机会有限，当前范围估算也不足以覆盖跟注成本，优先弃牌。';
     }
+    const improvement=explainImprovement(hand,s.communityCards,bestHand);
+    const pricing=callPrice({cost:context.cost,contestable:context.contestable,equityLow:context.contestable?(evLow+context.cost)/context.contestable:0,equityBase:context.contestable?expectedReturn/context.contestable:0,equityHigh:context.contestable?(evHigh+context.cost)/context.contestable:0,stack:hero.chips,complex:context.cost!==legal.toCall||ranges.some(r=>s.players[r.player].isAllIn)||new Set(context.pots.map(p=>p.eligible.join(','))).size>1});
+    const priceExplanation=explainCallPrice(pricing,{street:s.street,future:s.street<3&&!allInCall&&!ranges.every(r=>s.players[r.player].isAllIn),evLow,evHigh});
     const analysisParts=[
       {title:'手牌与牌面',body:handText},
       ...(drawExplanation?[{title:'听牌与追牌判断',body:drawExplanation}]:[]),
+      ...(improvement?[{title:s.street===0?'翻牌改善机会':'对子与牌型改善',body:improvement}]:[]),
       {title:'位置与对手',body:`你在${posLabel}，最大有效筹码约 ${Math.round(effectiveBB)} BB。${index===s.dealerButtonIndex?'翻后通常最后行动，更容易看到对手选择。':position==='SB'?'翻后通常较早行动，边缘牌更难控制底池。':position==='EP'?'后面仍有多人可行动，进入底池应更谨慎。':'实际行动顺序还取决于盲位和仍在局的玩家。'}${rangeText} 位置改变范围假设，但不能确定对手具体拿什么牌。`},
-      {title:'这次投入是否值得',body:`${facts} 模型估计底池份额 ${Math.round(model.equity*100)}%，${hasEvidence?`范围与行动情景下约 ${Math.round(low*100)}–${Math.round(high*100)}%，不是置信区间。`:'目前缺少行动信息，这个数字不能当作精确胜率。'}${legal.toCall?`无后续下注模型的跟注净期望约 ${Math.round(evLow)} 至 ${Math.round(evHigh)} 筹码。`:''}`},
+      {title:'这次投入是否值得',body:`${priceExplanation} ${facts} 模型估计底池份额 ${Math.round(model.equity*100)}%，${hasEvidence?`范围与行动情景下约 ${Math.round(low*100)}–${Math.round(high*100)}%，不是置信区间。`:'目前缺少行动信息，这个数字不能当作精确胜率。'}${legal.toCall?`无后续下注模型的跟注净期望约 ${Math.round(evLow)} 至 ${Math.round(evHigh)} 筹码。`:''}`},
       {title:betAmount?'下注尺度与后续':'后续计划',body:betAmount?`本轮总投入至 ${betAmount}，本次再投入 ${Math.max(0,betAmount-hero.currentBet)}。${s.street===0?(limpers?'跟入者增加，隔离尺寸相应提高；仍需他们愿意用更弱牌继续。':'这是启发式开池尺寸，不能据此认定为最优尺寸。'):'目标是让更弱牌跟注；面对再加注，重新判断范围。'}`:
-        `${legal.toCall?`跟注后余 ${afterCall} 筹码（${(afterCall/(s.bb??10)).toFixed(1)} BB）。`: `当前余 ${hero.chips} 筹码。`}${ranges.every(r=>s.players[r.player].isAllIn)?'所有对手已全下，不再有后续下注；按自己有资格争夺的各池计算。':remainingBB<=20?'后手较短，不宜依赖未来赢得大量筹码来补偿差赔率；也不等于必须全下。':'仍可能面临后续下注；边缘牌应预留弃牌空间，不能因已有投入而硬跟。'}`}
+        `${legal.toCall?`跟注后余 ${afterCall} 筹码（${(afterCall/(s.bb??10)).toFixed(1)} BB）。`: `当前余 ${hero.chips} 筹码。`}${s.street===3?'河牌已发完；面对下注时，只按当前牌力、范围和金额重新判断，不再为改善牌付费。':ranges.every(r=>s.players[r.player].isAllIn)?'所有对手已全下，不再有后续下注；按自己有资格争夺的各池计算。':remainingBB<=20?'后手较短，不宜依赖未来赢得大量筹码来补偿差赔率；也不等于必须全下。':'仍可能面临后续下注；边缘牌应预留弃牌空间，不能因已有投入而硬跟。'}`}
     ];
     const cautions='启发式范围模型，未经求解器校准；份额不是盈利概率。敏感性区间包含放宽/收紧范围及尚未行动玩家弃牌的情景，不是置信区间。忽略后续下注和抽水，已有投入为沉没成本。';
     return {action,betAmount,coach:[facts,...reasons,cautions].join(' '),winProbability:model.equity,tier:winTier(model.equity).cls,requiredEquity:context.requiredEquity,
-      summary,risk,analysisParts,reasons,alternatives,facts,cautions,ranges:ranges.map(({combos,...range})=>range),sensitivity:{low,high,evLow,evHigh},
+      summary,risk,pricing,analysisParts,reasons,alternatives,facts,cautions,ranges:ranges.map(({combos,...range})=>range),sensitivity:{low,high,evLow,evHigh},
       details:{street:String(s.street),streetName:['翻前','翻牌','转牌','河牌'][s.street],handDesc:describeHand(hand),handStrength:null,position,positionDesc:describePosition(position),
         drawInfo:drawExplanation,drawIcon:'♠',ehs:null,potOdds:context.requiredEquity,spr,effectiveBB,remainingBB,callCost:context.cost,limpers,opponentsBetting:countAggressors(s),opponents:ranges.length,samples:model.samples,exact:model.exact,model:'行为加权范围',callEV:ev}};
 }

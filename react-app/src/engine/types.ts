@@ -122,6 +122,7 @@ export interface Advice {
   summary:string;
   risk:string;
   facts:string;
+  pricing:{cost:number;required:number;low:number|null;base:number|null;high:number|null;complex:boolean;verdict:string};
   analysisParts:{title:string;body:string}[];
   reasons:string[];
   alternatives:{action:string;reason:string}[];

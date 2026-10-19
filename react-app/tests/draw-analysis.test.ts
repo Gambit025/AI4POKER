@@ -35,3 +35,9 @@ test('coach and recap surface the actual backdoor judgment from decision time',(
   for(const p of s.players){p.currentBet=0;p.actedThisStreet=false;}const a=g.getAdvice();assert.ok(a.analysisParts.find(p=>p.title==='听牌与追牌判断'&&p.body.includes('4.4%')));
   assert.equal(a.action,'过牌');g.act('check');s.communityCards.push(c(2,'c'));assert.deepEqual(getHandRecap(s).decisions[0].analysisParts,a.analysisParts);
 });
+
+test('one-card low flush draws describe domination risk; ace-high draw is distinguished',()=>{
+ const b=[c(4,'h'),c(11,'h'),c(12,'h')];const low=explainDraws([c(8,'h'),c(10,'c')],b);assert.match(low,/单张手牌听花/);assert.match(low,/更高的同花色牌/);
+ assert.match(explainDraws([c(14,'h'),c(10,'c')],b),/A 高同花/);
+ const d=drawAnalysis([c(11,'s'),c(9,'d')],[c(7,'c'),c(10,'h'),c(13,'s')]);assert.equal(d.straight.outs,8);assert.deepEqual(d.straight.ranks,[8,12]);
+});

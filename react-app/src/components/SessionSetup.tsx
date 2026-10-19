@@ -20,7 +20,7 @@ export function SessionSetup({ onStart, initialScreen='cover', initialConfig }: 
   return <main className={`session-page cover-page ${screen==='cover'?'home-cover':'settings-page'}`}>
     <header className="session-header">
       <a className="brand" href="./" onClick={e=>{e.preventDefault();setScreen('cover');}} aria-label="AI4POKER 首页"><span className="brand-mark"><Spade size={20} fill="currentColor" /></span><span>AI 4 <span className="brand-light">POKER</span></span></a>
-      {screen==='settings'?<button className="back-to-cover" onClick={()=>setScreen('cover')}><ArrowLeft size={14}/>返回首页</button>:<span className="header-note"><span className="status-dot" /> 世界上学习德州扑克最好的地方</span>}
+      {screen==='settings'?<button className="back-to-cover" onClick={()=>setScreen('cover')}><ArrowLeft size={14}/>返回首页</button>:<span className="header-note">made by <strong>秦睿涵Ryan</strong></span>}
     </header>
     {screen==='cover'?<div className="session-grid landing-grid">
       <section className="welcome-section" aria-labelledby="welcome-title">
@@ -48,6 +48,5 @@ export function SessionSetup({ onStart, initialScreen='cover', initialConfig }: 
         <button className="secondary-button" onClick={start}>进入自由练习<ArrowRight size={18} /></button>
       </section>
     </div>}
-    <footer className="session-footer"><p>made by <strong>秦睿涵Ryan</strong></p></footer>
   </main>;
 }
