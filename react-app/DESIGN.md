@@ -57,3 +57,7 @@ These are practical references, not a claim that a single website has a verified
 - Home headline: “Learn how to play with AI, then play your opponents.” The cover exposes one central “start playing” action.
 - Flow: cover → settings → game. Settings retain all existing practice choices and the beginner lesson. Game return goes directly to settings and preserves the last configuration. Footer credit remains on both pages.
 - Mobile cover checked at 320×568 with no overflow; desktop cover/setup checked at 1280×720. Settings use a vertical mobile layout, with beginner entry after the configuration.
+
+## Persistent user preference · 2026-10-19
+
+Prefer fewer small words: omit ornamental eyebrows, duplicate footer brands, motivational taglines, redundant section subtitles and footnotes. Keep necessary controls, values and useful coaching analysis. Do not reintroduce text the user explicitly removed. Keep only “made by 秦睿涵Ryan” in the footer. Home header copy is “世界上学习德州扑克最好的地方”; setup switch is “AI教练辅助”. This preference is also recorded in .cursor/rules/website-design.mdc.
